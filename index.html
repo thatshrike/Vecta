@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compliance Verification - Vertical Slice</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            padding: 40px;
+            background-color: #f8f9fa;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+
+        .card {
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        .COMPLIANT {
+            background-color: #e6f4ea;
+            border-left: 6px solid #34a853;
+        }
+
+        .NON_COMPLIANT {
+            background-color: #fce8e6;
+            border-left: 6px solid #ea4335;
+        }
+
+        .INCONCLUSIVE {
+            background-color: #fef7e0;
+            border-left: 6px solid #fbbc04;
+        }
+
+        h3 {
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .badge {
+            font-size: 0.75em;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .COMPLIANT .badge {
+            background: #34a853;
+            color: white;
+        }
+
+        .NON_COMPLIANT .badge {
+            background: #ea4335;
+            color: white;
+        }
+
+        .INCONCLUSIVE .badge {
+            background: #fbbc04;
+            color: #333;
+        }
+
+        p {
+            margin: 10px 0;
+            line-height: 1.5;
+        }
+
+        .evidence {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+            font-size: 0.9em;
+        }
+
+        .evidence>div {
+            flex: 1;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 6px;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .evidence-label {
+            display: block;
+            font-size: 0.8em;
+            text-transform: uppercase;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        code {
+            background: rgba(0, 0, 0, 0.05);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Compliance Verification Slice</h1>
+    <div id="results"></div>
+
+    <script>
+        // Inputs
+        const tenderText = "RAM must be at least 16 GB";
+        const bidderTexts = [
+            { name: "Bidder A", text: "RAM: 32 GB" },
+            { name: "Bidder B", text: "RAM: 8 GB" },
+            { name: "Bidder C", text: "Processor: Intel i7" }
+        ];
+
+        // Step 1 - Requirement extraction
+        function extractRequirement(text) {
+            // Simple hardcoded regex for this specific slice
+            const match = text.match(/RAM must be at least (\d+) (GB)/i);
+            if (match) {
+                return {
+                    id: "REQ-001",
+                    type: "NUMERIC",
+                    field: "ram",
+                    operator: ">=",
+                    value: { min: parseInt(match[1], 10), unit: match[2] },
+                    evidence: { text: text },
+                    confidence: 1.0
+                };
+            }
+            return null;
+        }
+
+        // Step 2 - Bidder claim extraction
+        function extractClaim(text, requirementId) {
+            const match = text.match(/RAM:\s*(\d+)\s*(GB)/i);
+            if (match) {
+                return {
+                    requirement_id: requirementId,
+                    value: { value: parseInt(match[1], 10), unit: match[2] },
+                    evidence: { text: text },
+                    confidence: 1.0
+                };
+            }
+            return null; // Explicitly returning null when no claim exists
+        }
+
+        // Step 3 - Verdict engine
+        function evaluateVerdict(requirement, claim, bidderName) {
+            // Handle absence of claim
+            if (!claim) {
+                return {
+                    requirement_id: requirement.id,
+                    verdict: "INCONCLUSIVE",
+                    reason: "No bidder evidence found for this requirement.",
+                    requires_human_review: true,
+                    review_reason: "No bidder evidence found for this requirement.",
+                    evidence: {
+                        tender: { text: requirement.evidence.text },
+                        bidder: null
+                    },
+                    bidderName: bidderName
+                };
+            }
+
+            const reqVal = requirement.value.min;
+            const claimVal = claim.value.value;
+
+            // Handle matching operator (assuming matching unit for simplicity in this slice)
+            if (claimVal >= reqVal) {
+                return {
+                    requirement_id: requirement.id,
+                    verdict: "COMPLIANT",
+                    reason: `Bidder RAM (${claimVal} GB) meets or exceeds required minimum (${reqVal} GB).`,
+                    requires_human_review: false,
+                    review_reason: null,
+                    evidence: {
+                        tender: { text: requirement.evidence.text },
+                        bidder: { text: claim.evidence.text }
+                    },
+                    bidderName: bidderName
+                };
+            } else {
+                return {
+                    requirement_id: requirement.id,
+                    verdict: "NON_COMPLIANT",
+                    reason: `Bidder RAM (${claimVal} GB) does not meet required minimum (${reqVal} GB).`,
+                    requires_human_review: false,
+                    review_reason: null,
+                    evidence: {
+                        tender: { text: requirement.evidence.text },
+                        bidder: { text: claim.evidence.text }
+                    },
+                    bidderName: bidderName
+                };
+            }
+        }
+
+        // Execute Pipeline
+        const requirement = extractRequirement(tenderText);
+        const verdicts = bidderTexts.map(bidder => {
+            const claim = extractClaim(bidder.text, requirement.id);
+            return evaluateVerdict(requirement, claim, bidder.name);
+        });
+
+        // Step 4 - Minimal display
+        const resultsContainer = document.getElementById('results');
+        verdicts.forEach(v => {
+            const card = document.createElement('div');
+            card.className = `card ${v.verdict}`;
+
+            const bidderEvidenceText = v.evidence.bidder ? `<code>${v.evidence.bidder.text}</code>` : "<em>None</em>";
+
+            card.innerHTML = `
+                <h3>${v.bidderName} <span class="badge">${v.verdict}</span></h3>
+                <p><strong>Reason:</strong> ${v.reason}</p>
+                <div class="evidence">
+                    <div>
+                        <span class="evidence-label">Tender Evidence</span>
+                        <code>${v.evidence.tender.text}</code>
+                    </div>
+                    <div>
+                        <span class="evidence-label">Bidder Evidence</span>
+                        ${bidderEvidenceText}
+                    </div>
+                </div>
+            `;
+            resultsContainer.appendChild(card);
+        });
+    </script>
+</body>
+
+</html>
