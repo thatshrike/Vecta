@@ -40,16 +40,36 @@ def extract_bidder_claim(pdf_path):
             raw_text_full += f"--- Page {i+1} ---\n{text}\n"
             
             # Basic parsing logic assuming text exists (even though it might not!)
-            # Looking for "Average Annual Turnover (3 years): Rs. 41,50,000" or similar
-            match = re.search(r"Average Annual Turnover[^\n:]*:\s*(?:Rs\.?)?\s*([\d,]+)", text, re.IGNORECASE)
+            # Looking for "Average Annual Turnover (3 years): Rs. 41,50,000" or "41.5 Lakh"
+            match = re.search(r"Average Annual Turnover[^\n:]*:\s*(Rs\.?)?\s*([\d,.]+)\s*(Lakh|Lac|Crores?|Cr)?", text, re.IGNORECASE)
             if match and not claim:
-                num_str = match.group(1).replace(",", "")
-                val_lakh = float(num_str) / 100000.0
-                claim = {
-                    "value": val_lakh,
-                    "unit": "lakh",
-                    "evidence": { "document": pdf_path, "page": i + 1, "text": match.group(0).strip() }
-                }
+                prefix = match.group(1)
+                num_str = match.group(2).replace(",", "")
+                suffix = match.group(3)
+                
+                try:
+                    val = float(num_str)
+                    val_lakh = None
+                    
+                    if suffix:
+                        suffix = suffix.lower()
+                        if suffix.startswith('lakh') or suffix.startswith('lac'):
+                            val_lakh = val
+                        elif suffix.startswith('crore') or suffix.startswith('cr'):
+                            val_lakh = val * 100.0
+                    else:
+                        # Raw rupee format
+                        if prefix or "," in match.group(2) or val >= 10000:
+                            val_lakh = val / 100000.0
+                    
+                    if val_lakh is not None:
+                        claim = {
+                            "value": val_lakh,
+                            "unit": "lakh",
+                            "evidence": { "document": pdf_path, "page": i + 1, "text": match.group(0).strip() }
+                        }
+                except ValueError:
+                    pass
     except Exception as e:
         raw_text_full += f"Error: {e}\n"
         
@@ -92,11 +112,7 @@ if __name__ == "__main__":
     print(json.dumps(req, indent=2))
     print("\n" + "*"*80 + "\n")
     
-    bidders = [
-        "bidder_compliant.pdf",
-        "bidder_noncompliant.pdf",
-        "bidder_ambigous.pdf"
-    ]
+    bidders = ["bidder_compliant.pdf", "bidder_noncompliant.pdf", "bidder_ambigous.pdf", "bidder_lakh_format.pdf"]
     
     claims = {}
     print("STEP 2: BIDDER EXTRACTION")
