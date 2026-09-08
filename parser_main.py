@@ -39,15 +39,28 @@ def extract_tender_reqs(pdf_path):
                     "confidence": 1.0
                 })
 
-            # REQ-003: Document Present (OEM Authorization Certificate)
+            # REQ-003 & REQ-004: Document Present
             list_match = re.search(r"Document required[^\n]*\n*from seller\s*(.*?)\n\*In case", text, re.IGNORECASE | re.DOTALL)
-            if list_match and not any(r['id'] == 'REQ-003' for r in reqs):
+            if list_match:
                 full_list_text = list_match.group(1).replace('\n', ' ').strip()
-                if re.search(r"OEM Authorization\s*Certificate", full_list_text, re.IGNORECASE):
+                
+                # REQ-003: OEM Authorization Certificate
+                if not any(r['id'] == 'REQ-003' for r in reqs) and re.search(r"OEM Authorization\s*Certificate", full_list_text, re.IGNORECASE):
                     reqs.append({
                         "id": "REQ-003",
                         "type": "DOCUMENT_PRESENT",
                         "field": "oem_authorization_certificate",
+                        "required": True,
+                        "evidence": { "document": pdf_path, "page": i + 1, "text": full_list_text },
+                        "confidence": 1.0
+                    })
+
+                # REQ-004: Bidder Turnover
+                if not any(r['id'] == 'REQ-004' for r in reqs) and re.search(r"Bidder Turnover", full_list_text, re.IGNORECASE):
+                    reqs.append({
+                        "id": "REQ-004",
+                        "type": "DOCUMENT_PRESENT",
+                        "field": "bidder_turnover_document",
                         "required": True,
                         "evidence": { "document": pdf_path, "page": i + 1, "text": full_list_text },
                         "confidence": 1.0
