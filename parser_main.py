@@ -512,12 +512,17 @@ def aggregate_bid_verdicts(bid_id, bidder_name, verdicts):
         
         item = {
             "requirement_id": r_id,
-            "verdict": v_status
+            "verdict": v_status,
+            "criticality": get_criticality(r_id),
         }
         if verdict.get("reason"):
             item["reason"] = verdict["reason"]
         if verdict.get("review_reason"):
             item["review_reason"] = verdict["review_reason"]
+        if verdict.get("requires_human_review"):
+            item["requires_human_review"] = True
+        if verdict.get("evidence"):
+            item["evidence"] = verdict["evidence"]
             
         line_items.append(item)
         

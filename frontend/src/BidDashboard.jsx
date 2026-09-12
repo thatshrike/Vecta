@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckCircle, XCircle, AlertTriangle, Flag, ArrowRight, FileText, ShieldCheck, Settings, Globe } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, Flag, ArrowRight, FileText, ShieldCheck, Settings, Globe, CheckSquare, XSquare } from 'lucide-react';
 
 const mockData = {
   "bid_id": "GEM/2026/B/7805877",
@@ -121,6 +121,19 @@ export default function BidDashboard({ data, bidderName }) {
   const [selectedItemId, setSelectedItemId] = useState(report.line_items[0]?.requirement_id);
   const selectedItem = report.line_items.find(item => item.requirement_id === selectedItemId);
 
+  // Human override state: {reqId -> {decision: 'ACCEPTED'|'REJECTED', reason: string}}
+  const [overrides, setOverrides] = useState({});
+  const [overrideInput, setOverrideInput] = useState('');
+  const [overrideLog, setOverrideLog] = useState([]);
+
+  const applyOverride = (reqId, decision) => {
+    if (!overrideInput.trim()) return;
+    const entry = { reqId, decision, reason: overrideInput.trim(), timestamp: new Date().toLocaleTimeString() };
+    setOverrides(prev => ({ ...prev, [reqId]: entry }));
+    setOverrideLog(prev => [entry, ...prev]);
+    setOverrideInput('');
+  };
+
   // Derived Summary logic for Panel B
   const categories = {
     documents: { total: 0, passed: 0 },
@@ -143,12 +156,19 @@ export default function BidDashboard({ data, bidderName }) {
     inconclusive: report.line_items.filter(i => i.verdict === 'INCONCLUSIVE').length,
   };
 
-  // Action Queue logic for Panel C
-  const pendingActions = report.line_items.filter(item => 
-    item.requires_human_review || 
-    item.verdict === 'INCONCLUSIVE' ||
-    (item.verdict === 'NON_COMPLIANT' && item.review_reason)
-  );
+  // Action Queue: items needing review, sorted mandatory-first
+  const CRIT_ORDER = { mandatory: 0, scored: 1 };
+  const pendingActions = report.line_items
+    .filter(item =>
+      item.requires_human_review ||
+      item.verdict === 'INCONCLUSIVE' ||
+      (item.verdict === 'NON_COMPLIANT' && item.review_reason)
+    )
+    .sort((a, b) => {
+      const ca = CRIT_ORDER[a.criticality ?? 'scored'] ?? 1;
+      const cb = CRIT_ORDER[b.criticality ?? 'scored'] ?? 1;
+      return ca - cb;
+    });
 
   const displayBidderName = bidderName || report.bidder_name;
 
@@ -285,18 +305,34 @@ export default function BidDashboard({ data, bidderName }) {
                 <span className="text-xs font-bold text-orange-700 bg-orange-200 px-1.5 py-0.5 rounded">{pendingActions.length} Pending</span>
               </div>
               <div className="flex flex-col overflow-y-auto max-h-[300px]">
-                {pendingActions.map(action => (
-                  <div 
-                    key={action.requirement_id}
-                    onClick={() => setSelectedItemId(action.requirement_id)}
-                    className="px-3 py-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer flex flex-col gap-1 transition-colors"
-                  >
-                    <span className="font-mono text-xs font-bold text-gray-800">Verify: {action.requirement_id}</span>
-                    <span className="text-xs text-gray-600 leading-snug line-clamp-2">
-                      {action.review_reason || action.reason || "Manual confirmation required."}
-                    </span>
-                  </div>
-                ))}
+                {pendingActions.map(action => {
+                  const hasOverride = !!overrides[action.requirement_id];
+                  const ov = overrides[action.requirement_id];
+                  return (
+                    <div
+                      key={action.requirement_id}
+                      onClick={() => setSelectedItemId(action.requirement_id)}
+                      className={`px-3 py-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer flex flex-col gap-1 transition-colors ${hasOverride ? 'opacity-60' : ''}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-xs font-bold text-gray-800">Verify: {action.requirement_id}</span>
+                        <div className="flex items-center gap-1">
+                          {action.criticality === 'mandatory' && (
+                            <span className="text-[9px] font-bold uppercase text-orange-600 bg-orange-50 border border-orange-200 px-1 py-0.5 rounded">MAN</span>
+                          )}
+                          {hasOverride && (
+                            <span className={`text-[9px] font-bold uppercase px-1 py-0.5 rounded border ${
+                              ov.decision === 'ACCEPTED' ? 'text-green-700 bg-green-50 border-green-200' : 'text-red-700 bg-red-50 border-red-200'
+                            }`}>{ov.decision}</span>
+                          )}
+                        </div>
+                      </div>
+                      <span className="text-xs text-gray-600 leading-snug line-clamp-2">
+                        {action.review_reason || action.reason || "Manual confirmation required."}
+                      </span>
+                    </div>
+                  );
+                })}
                 {pendingActions.length === 0 && (
                   <div className="p-4 text-center text-gray-500 text-xs">No pending actions.</div>
                 )}
@@ -310,11 +346,11 @@ export default function BidDashboard({ data, bidderName }) {
         <div className="w-[35%] min-w-[350px] border-r border-gray-200 flex flex-col bg-white">
           <div className="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center shrink-0">
             <h2 className="font-semibold text-gray-800">Evaluated Requirements</h2>
-            <span className="text-xs text-gray-500 font-medium">{mockData.summary.total} Items</span>
+            <span className="text-xs text-gray-500 font-medium">{report.summary.total} Items</span>
           </div>
           
           <div className="overflow-y-auto flex-1">
-            {mockData.line_items.map((item) => {
+            {report.line_items.map((item) => {
               const isSelected = item.requirement_id === selectedItemId;
               const styles = getVerdictStyles(item.verdict);
               
@@ -386,6 +422,80 @@ export default function BidDashboard({ data, bidderName }) {
                       Review Flag Details
                     </h3>
                     <p className="text-yellow-900">{selectedItem.review_reason}</p>
+                  </div>
+                )}
+
+                {/* Human Override Panel */}
+                {(selectedItem.requires_human_review || selectedItem.verdict === 'INCONCLUSIVE' || (selectedItem.verdict === 'NON_COMPLIANT' && selectedItem.review_reason)) && (
+                  <div className="border border-gray-200 rounded-md overflow-hidden">
+                    <div className="bg-gray-50 border-b border-gray-200 px-4 py-2">
+                      <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Officer Decision</h3>
+                      <p className="text-[10px] text-gray-500 mt-0.5">Human retains final authority. This decision is logged for audit.</p>
+                    </div>
+                    <div className="p-4 flex flex-col gap-3">
+                      {overrides[selectedItem.requirement_id] ? (
+                        <div className={`flex items-start gap-2 p-3 rounded-md border text-sm ${
+                          overrides[selectedItem.requirement_id].decision === 'ACCEPTED'
+                            ? 'bg-green-50 border-green-200 text-green-900'
+                            : 'bg-red-50 border-red-200 text-red-900'
+                        }`}>
+                          {overrides[selectedItem.requirement_id].decision === 'ACCEPTED'
+                            ? <CheckSquare className="w-4 h-4 shrink-0 mt-0.5" />
+                            : <XSquare className="w-4 h-4 shrink-0 mt-0.5" />}
+                          <div>
+                            <p className="font-bold">{overrides[selectedItem.requirement_id].decision}</p>
+                            <p className="text-xs mt-0.5 opacity-80">{overrides[selectedItem.requirement_id].reason}</p>
+                            <p className="text-[10px] mt-1 opacity-60">{overrides[selectedItem.requirement_id].timestamp}</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <textarea
+                            value={overrideInput}
+                            onChange={e => setOverrideInput(e.target.value)}
+                            placeholder="State your reason for accepting or rejecting this finding..."
+                            className="w-full border border-gray-200 rounded-md px-3 py-2 text-xs text-gray-800 resize-none h-20 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => applyOverride(selectedItem.requirement_id, 'ACCEPTED')}
+                              disabled={!overrideInput.trim()}
+                              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-semibold bg-green-600 text-white hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            >
+                              <CheckSquare className="w-3.5 h-3.5" /> Accept Finding
+                            </button>
+                            <button
+                              onClick={() => applyOverride(selectedItem.requirement_id, 'REJECTED')}
+                              disabled={!overrideInput.trim()}
+                              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-semibold bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            >
+                              <XSquare className="w-3.5 h-3.5" /> Override / Reject
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Override Audit Log */}
+                {overrideLog.length > 0 && (
+                  <div className="border border-gray-200 rounded-md overflow-hidden">
+                    <div className="bg-gray-50 border-b border-gray-200 px-4 py-2">
+                      <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Officer Decision Log</h3>
+                    </div>
+                    <div className="divide-y divide-gray-100 max-h-48 overflow-y-auto">
+                      {overrideLog.map((entry, i) => (
+                        <div key={i} className="px-4 py-2 flex items-start gap-2 text-xs">
+                          <span className={`font-bold shrink-0 ${
+                            entry.decision === 'ACCEPTED' ? 'text-green-700' : 'text-red-700'
+                          }`}>{entry.decision}</span>
+                          <span className="font-mono text-gray-500 shrink-0">{entry.reqId}</span>
+                          <span className="text-gray-700 flex-1">{entry.reason}</span>
+                          <span className="text-gray-400 shrink-0">{entry.timestamp}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
