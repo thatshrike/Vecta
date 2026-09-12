@@ -566,17 +566,18 @@ def aggregate_bid_verdicts(bid_id, bidder_name, verdicts):
 
 if __name__ == "__main__":
     print("STEP 1: TENDER EXTRACTION")
-    reqs = extract_tender_reqs("tender_bhel.pdf")
-    print(json.dumps(reqs, indent=2))
-    print("\n" + "*"*80 + "\n")
+    reqs = extract_tender_reqs("test_data/bhel/tender_bhel.pdf")
     
     bidders = [
-        "bidder_full_compliant.pdf",
-        "bidder_partial_compliant.pdf",
-        "bidder_semantic_clear_pass.pdf",
-        "bidder_semantic_clear_fail.pdf",
-        "bidder_semantic_ambiguous.pdf",
-        "bidder_tech_spec.pdf"
+        "test_data/bhel/bidder_compliant.pdf",
+        "test_data/bhel/bidder_noncompliant.pdf",
+        "test_data/bhel/bidder_ambigous.pdf",
+        "test_data/bhel/bidder_full_compliant.pdf",
+        "test_data/bhel/bidder_partial_compliant.pdf",
+        "test_data/bhel/bidder_semantic_clear_pass.pdf",
+        "test_data/bhel/bidder_semantic_clear_fail.pdf",
+        "test_data/bhel/bidder_semantic_ambiguous.pdf",
+        "test_data/bhel/bidder_tech_spec.pdf"
     ]
     
     all_claims = {}

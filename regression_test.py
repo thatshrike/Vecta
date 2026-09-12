@@ -3,19 +3,20 @@ import requests
 import time
 
 URL = "http://localhost:8000/analyze"
-TENDER_FILE = "tender_bhel.pdf"
+TENDER_FILE = "test_data/bhel/tender_bhel.pdf"
 
+# Format: (filename, expected_verdict_direction)
 BIDDERS = [
-    ("bidder_compliant.pdf", "COMPLIANT"),
-    ("bidder_noncompliant.pdf", "NON_COMPLIANT"),
-    ("bidder_ambigous.pdf", "INCONCLUSIVE/MIXED"),
-    ("bidder_tech_spec.pdf", "MIXED (TS-*)"),
-    ("bidder_semantic_clear_pass.pdf", "COMPLIANT"),
-    ("bidder_semantic_clear_fail.pdf", "NON_COMPLIANT"),
-    ("bidder_semantic_ambiguous.pdf", "INCONCLUSIVE"),
-    ("bidder_partial_compliant.pdf", "MIXED"),
-    ("bidder_lakh_format.pdf", "COMPLIANT"),
-    ("bidder_full_compliant.pdf", "COMPLIANT")
+    ("test_data/bhel/bidder_compliant.pdf", "COMPLIANT"),
+    ("test_data/bhel/bidder_noncompliant.pdf", "NON_COMPLIANT"),
+    ("test_data/bhel/bidder_ambigous.pdf", "INCONCLUSIVE/MIXED"),
+    ("test_data/bhel/bidder_tech_spec.pdf", "MIXED (TS-*)"),
+    ("test_data/bhel/bidder_semantic_clear_pass.pdf", "COMPLIANT"),
+    ("test_data/bhel/bidder_semantic_clear_fail.pdf", "NON_COMPLIANT"),
+    ("test_data/bhel/bidder_semantic_ambiguous.pdf", "INCONCLUSIVE"),
+    ("test_data/bhel/bidder_partial_compliant.pdf", "MIXED"),
+    ("test_data/bhel/bidder_lakh_format.pdf", "COMPLIANT"),
+    ("test_data/bhel/bidder_full_compliant.pdf", "COMPLIANT")
 ]
 
 print("Waiting for server to start...")
