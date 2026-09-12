@@ -77,39 +77,63 @@ export default function UploadDashboard({ onComplete }) {
     setBidderFiles(prev => prev.map(b => b.id === id ? { ...b, derivedName: newName } : b));
   };
 
-  const handleRunAnalysis = () => {
+  const handleRunAnalysis = async () => {
     setIsSimulating(true);
+    setBidderError('');
+    setTenderError('');
     
-    // Initialize status for all bidders
+    // Show spinner for all bidders since it's a batch request
     const initialStatus = {};
-    bidderFiles.forEach(b => initialStatus[b.id] = 'pending');
+    bidderFiles.forEach(b => initialStatus[b.id] = 'running');
     setSimulationStatus(initialStatus);
 
-    let currentIdx = 0;
-    
-    const runNext = () => {
-      if (currentIdx >= bidderFiles.length) {
-        // All done, transition after a small delay
-        setTimeout(() => {
-          // TODO: Replace this simulation with real fetch() to backend
-          onComplete(bidderFiles);
-        }, 1000);
-        return;
+    try {
+      const formData = new FormData();
+      formData.append('tender', tenderFile);
+      
+      bidderFiles.forEach(b => {
+        formData.append('bidders', b.file);
+      });
+      
+      const derivedNames = bidderFiles.map(b => b.derivedName);
+      formData.append('bidder_names', JSON.stringify(derivedNames));
+
+      const response = await fetch('http://localhost:8000/analyze', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Analysis failed: ${response.status} — ${errText.substring(0, 100)}`);
       }
 
-      const currentBidder = bidderFiles[currentIdx];
+      const reports = await response.json();
       
-      setSimulationStatus(prev => ({ ...prev, [currentBidder.id]: 'running' }));
-      
-      setTimeout(() => {
-        setSimulationStatus(prev => ({ ...prev, [currentBidder.id]: 'done' }));
-        currentIdx++;
-        runNext();
-      }, 2000); // 2 second delay per bidder
-    };
+      // Update statuses to done briefly before transition
+      const finalStatus = {};
+      bidderFiles.forEach(b => finalStatus[b.id] = 'done');
+      setSimulationStatus(finalStatus);
 
-    // Start simulation
-    runNext();
+      setTimeout(() => {
+        onComplete(reports);
+      }, 500);
+
+    } catch (error) {
+      console.error(error);
+      const isNetworkError = error.message.includes('Failed to fetch') || error.message.includes('NetworkError');
+      if (isNetworkError) {
+        setBidderError('Backend unavailable — make sure the Python API server is running on port 8000 (python api_server.py)');
+      } else {
+        setBidderError(error.message);
+      }
+      
+      // Reset statuses on error
+      const resetStatus = {};
+      bidderFiles.forEach(b => resetStatus[b.id] = 'pending');
+      setSimulationStatus(resetStatus);
+      setIsSimulating(false);
+    }
   };
 
   const canRun = tenderFile && bidderFiles.length > 0;

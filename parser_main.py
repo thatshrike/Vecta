@@ -248,6 +248,16 @@ def extract_bidder_claims(pdf_path):
                             "evidence": { "document": pdf_path, "page": i + 1, "text": match3.group(0).strip() }
                         }
 
+            # REQ-004 claim: Bidder Turnover Document
+            if 'REQ-004' not in claims:
+                match4 = re.search(r"(?:attached|enclosed|annexure|provided)?[^\n]*Bidder Turnover(?: Document| Certificate)?[^\n]*(?:attached|enclosed|annexure|provided)?", text, re.IGNORECASE)
+                if match4:
+                    if re.search(r"(attached|enclosed|annexure|provided)", match4.group(0), re.IGNORECASE):
+                        claims['REQ-004'] = {
+                            "present": True,
+                            "evidence": { "document": pdf_path, "page": i + 1, "text": match4.group(0).strip() }
+                        }
+
     except Exception as e:
         raw_text_full += f"Error: {e}\n"
         
@@ -265,7 +275,7 @@ def evaluate(claim, req):
             field_name_formatted = req['field'].replace('_', ' ').title() if req['field'] != 'oem_authorization_certificate' else 'OEM Authorization Certificate'
             return {
                 "requirement_id": req["id"],
-                "verdict": "NON_COMPLIANT",
+                "verdict": "INCONCLUSIVE",
                 "reason": f"Required document '{field_name_formatted}' was not found in the bidder's submission.",
                 "requires_human_review": True,
                 "review_reason": "Keyword-based absence detection may miss differently-worded attachment references (e.g. 'Authorization letter from OEM enclosed'). Recommend manual confirmation before final rejection."
