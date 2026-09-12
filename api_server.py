@@ -94,13 +94,62 @@ async def analyze(
                 r_id = req["id"]
                 verdicts[r_id] = evaluate(claims.get(r_id), req)
 
-            # Policy checks — default to worst-case since we can't extract
-            # local content % or Udyam status from arbitrary PDFs yet.
-            # TODO: add regex extractors for local content % and Udyam number.
+            # Portal checks — Layer 3 adapters (PAN real, GSTN/Udyam mocked).
+            # Run BEFORE policy verdicts so POLICY-002 can consume the adapter result
+            # instead of re-deriving Udyam status from PDF text.
+            portal_check_results = run_portal_checks(raw_text)
+
+            # Policy checks
+            # --- POLICY-001: Local Content (MII Class 1) ---
+            # _extract_local_content returns None when no value found in PDF.
+            # If absent: INCONCLUSIVE (bidder must clarify). Only NON_COMPLIANT
+            # if a value was actually found and it fails the threshold.
             local_content_pct = _extract_local_content(raw_text)
-            udyam_verified = _extract_udyam(raw_text)
-            verdicts["POLICY-001"] = check_mii_class1(local_content_pct)
-            verdicts["POLICY-002"] = check_mse_preference(udyam_verified, udyam_verified)
+            if local_content_pct is None:
+                verdicts["POLICY-001"] = {
+                    "verdict": "INCONCLUSIVE",
+                    "reason": "No local content percentage found in the bidder's document.",
+                    "review_reason": "Bidder must declare local content % explicitly (e.g., 'Local content declared: 62%'). Cannot confirm or deny Class 1 compliance.",
+                    "requires_human_review": True,
+                }
+            else:
+                verdicts["POLICY-001"] = check_mii_class1(local_content_pct)
+
+            # --- POLICY-002: Udyam / MSE Preference ---
+            # Wire to the Udyam portal adapter result, not PDF text extraction.
+            # Adapter status semantics:
+            #   VERIFIED   → Udyam number found and format valid  (treat as confirmed present)
+            #   FAILED     → Udyam number found but format invalid (non-compliant)
+            #   UNVERIFIED → No Udyam number found at all         (INCONCLUSIVE — absent ≠ fail)
+            #   MOCKED     → Format OK but live portal not called  (INCONCLUSIVE — needs officer check)
+            udyam_check = next(
+                (c for c in portal_check_results if c["check_id"] == "UDYAM_REGISTRATION"),
+                None,
+            )
+            udyam_status = udyam_check["status"] if udyam_check else "UNVERIFIED"
+
+            if udyam_status == "VERIFIED":
+                # Number found and format valid — treat as registered for policy scoring
+                verdicts["POLICY-002"] = check_mse_preference(True, True)
+            elif udyam_status == "FAILED":
+                # Number present but structurally invalid — confirmed fail
+                verdicts["POLICY-002"] = {
+                    "verdict": "NON_COMPLIANT",
+                    "reason": f"Udyam number found but failed format validation: {udyam_check.get('detail', '')}",
+                }
+            else:
+                # UNVERIFIED (no number found) or MOCKED (found but live portal not called).
+                # Either way, we cannot confirm registration — INCONCLUSIVE, not auto-fail.
+                detail = udyam_check.get("detail", "Udyam registration status could not be confirmed.") if udyam_check else "Udyam check not executed."
+                verdicts["POLICY-002"] = {
+                    "verdict": "INCONCLUSIVE",
+                    "reason": detail,
+                    "review_reason": (
+                        "Udyam registration could not be confirmed from the document or portal adapter. "
+                        "Officer must verify manually via the Udyam portal before awarding MSE preference."
+                    ),
+                    "requires_human_review": True,
+                }
 
             report = aggregate_bid_verdicts(
                 bid_id=f"BID-{bidder_display_name}",
@@ -126,8 +175,7 @@ async def analyze(
                             item["evidence"] = {}
                         item["evidence"]["tender"] = req_obj["evidence"]
 
-            # Portal checks — Layer 3 adapters (PAN real, GSTN/Udyam mocked)
-            portal_check_results = run_portal_checks(raw_text)
+            # Attach portal check results to report
             report["portal_checks"] = portal_check_results
 
             reports.append(report)
@@ -138,11 +186,12 @@ async def analyze(
     return JSONResponse(content=reports)
 
 
-def _extract_local_content(raw_text: str) -> float:
+def _extract_local_content(raw_text: str) -> float | None:
     """
     Attempt to extract a local content percentage from raw bidder text.
-    Returns 0.0 if not found (conservative — will trigger NON_COMPLIANT
-    and force human review, which is safer than assuming compliance).
+    Returns None if not found — callers must treat None as INCONCLUSIVE, not 0.
+    Returning None is intentionally conservative: absent data != confirmed fail.
+    Expected bidder text: "Local content declared: 62%" or similar.
     """
     import re
     match = re.search(
@@ -152,17 +201,7 @@ def _extract_local_content(raw_text: str) -> float:
     )
     if match:
         return float(match.group(1))
-    return 0.0
-
-
-def _extract_udyam(raw_text: str) -> bool:
-    """
-    Returns True if an Udyam registration number pattern is found.
-    UDYAM-XX-00-0000000 format.
-    Conservative: only returns True on explicit pattern match.
-    """
-    import re
-    return bool(re.search(r"UDYAM-[A-Z]{2}-\d{2}-\d{7}", raw_text, re.IGNORECASE))
+    return None
 
 
 if __name__ == "__main__":
