@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckCircle, XCircle, AlertTriangle, Flag, ArrowRight, FileText, ShieldCheck, Settings } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, Flag, ArrowRight, FileText, ShieldCheck, Settings, Globe } from 'lucide-react';
 
 const mockData = {
   "bid_id": "GEM/2026/B/7805877",
@@ -56,6 +56,32 @@ const mockData = {
     { "requirement_id": "TS-Elastography", "verdict": "NON_COMPLIANT" },
     { "requirement_id": "POLICY-001", "verdict": "NON_COMPLIANT", "reason": "Local content 10.0% does not meet minimum (50%)." },
     { "requirement_id": "POLICY-002", "verdict": "NON_COMPLIANT", "reason": "No valid Udyam registration found." }
+  ],
+  "portal_checks": [
+    {
+      "check_id": "PAN_CHECKSUM",
+      "label": "PAN Structural Validation",
+      "status": "VERIFIED",
+      "detail": "PAN 'AABCP1234C' passes all structural rules: format, entity-type 'C' (Company), and name-initial check.",
+      "is_live": true,
+      "evidence": "AABCP1234C"
+    },
+    {
+      "check_id": "GSTIN_FORMAT",
+      "label": "GSTIN Format Check (Mocked)",
+      "status": "MOCKED",
+      "detail": "GSTIN '29AABCP1234C1Z5' passes local format validation. Live portal call not executed. [MOCKED]",
+      "is_live": false,
+      "evidence": "29AABCP1234C1Z5"
+    },
+    {
+      "check_id": "UDYAM_REGISTRATION",
+      "label": "Udyam Registration Check (Mocked)",
+      "status": "UNVERIFIED",
+      "detail": "No Udyam registration number found in the document.",
+      "is_live": false,
+      "evidence": null
+    }
   ]
 };
 
@@ -68,15 +94,32 @@ const getVerdictStyles = (verdict) => {
   }
 };
 
+const getPortalStatusStyles = (status) => {
+  switch (status) {
+    case 'VERIFIED':   return { dot: 'bg-green-500', badge: 'bg-green-100 text-green-800 border-green-200' };
+    case 'FAILED':     return { dot: 'bg-red-500',   badge: 'bg-red-100 text-red-800 border-red-200' };
+    case 'MOCKED':     return { dot: 'bg-blue-400',  badge: 'bg-blue-50 text-blue-800 border-blue-200' };
+    case 'UNVERIFIED': return { dot: 'bg-gray-400',  badge: 'bg-gray-100 text-gray-600 border-gray-200' };
+    default:           return { dot: 'bg-gray-300',  badge: 'bg-gray-100 text-gray-500 border-gray-200' };
+  }
+};
+
+const PORTAL_CHECK_SHORT = {
+  PAN_CHECKSUM:       'PAN',
+  GSTIN_FORMAT:       'GSTN',
+  UDYAM_REGISTRATION: 'Udyam',
+};
+
 const getRiskColor = (level) => {
   if (level === 'Low') return 'bg-green-100 text-green-800 border-green-200';
   if (level === 'Medium') return 'bg-yellow-100 text-yellow-800 border-yellow-200';
   return 'bg-red-100 text-red-800 border-red-200';
 };
 
-export default function BidDashboard({ bidderName }) {
-  const [selectedItemId, setSelectedItemId] = useState(mockData.line_items[0]?.requirement_id);
-  const selectedItem = mockData.line_items.find(item => item.requirement_id === selectedItemId);
+export default function BidDashboard({ data, bidderName }) {
+  const report = data || mockData;
+  const [selectedItemId, setSelectedItemId] = useState(report.line_items[0]?.requirement_id);
+  const selectedItem = report.line_items.find(item => item.requirement_id === selectedItemId);
 
   // Derived Summary logic for Panel B
   const categories = {
@@ -85,7 +128,7 @@ export default function BidDashboard({ bidderName }) {
     technical: { total: 0, passed: 0 }
   };
 
-  mockData.line_items.forEach(item => {
+  report.line_items.forEach(item => {
     let cat = 'eligibility';
     if (item.requirement_id.startsWith('TS-')) cat = 'technical';
     else if (item.requirement_id === 'REQ-003' || item.requirement_id === 'REQ-004') cat = 'documents';
@@ -94,10 +137,20 @@ export default function BidDashboard({ bidderName }) {
     if (item.verdict === 'COMPLIANT') categories[cat].passed++;
   });
 
-  // Action Queue logic for Panel C
-  const pendingActions = mockData.line_items.filter(item => item.requires_human_review || item.verdict === 'INCONCLUSIVE');
+  const summaryCount = {
+    compliant: report.line_items.filter(i => i.verdict === 'COMPLIANT').length,
+    non_compliant: report.line_items.filter(i => i.verdict === 'NON_COMPLIANT').length,
+    inconclusive: report.line_items.filter(i => i.verdict === 'INCONCLUSIVE').length,
+  };
 
-  const displayBidderName = bidderName || mockData.bidder_name;
+  // Action Queue logic for Panel C
+  const pendingActions = report.line_items.filter(item => 
+    item.requires_human_review || 
+    item.verdict === 'INCONCLUSIVE' ||
+    (item.verdict === 'NON_COMPLIANT' && item.review_reason)
+  );
+
+  const displayBidderName = bidderName || report.bidder_name;
 
   return (
     <div className="flex flex-col h-screen bg-gray-100 text-sm text-gray-900 font-sans overflow-hidden">
@@ -106,32 +159,65 @@ export default function BidDashboard({ bidderName }) {
       <div className="bg-white border-b border-gray-200 p-4 shrink-0 shadow-sm z-10 flex flex-col gap-3">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-6">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">{mockData.bid_id}</h1>
-              <p className="text-gray-600 font-medium">{displayBidderName}</p>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                Bid ID
+              </span>
+              <h1 className="text-xl font-bold text-gray-900 font-mono">
+                {report.bid_id}
+              </h1>
+              <p className="text-gray-600 font-medium text-sm">{displayBidderName}</p>
             </div>
             <div className="h-10 w-px bg-gray-300 mx-2"></div>
             <div className="flex flex-col">
               <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Compliance Score</span>
-              <span className="text-2xl font-black text-gray-800">{mockData.compliance_score} <span className="text-base font-medium text-gray-500">/ 100</span></span>
+              <span className="text-2xl font-black text-gray-800">{report.compliance_score} <span className="text-base font-medium text-gray-500">/ 100</span></span>
             </div>
-            <div className={`ml-4 px-3 py-1.5 rounded-md border font-bold text-sm uppercase flex items-center gap-1.5 ${getRiskColor(mockData.risk_level)}`}>
+            <div className={`ml-4 px-3 py-1.5 rounded-md border font-bold text-sm uppercase flex items-center gap-1.5 ${getRiskColor(report.risk_level)}`}>
               <ShieldCheck className="w-4 h-4" />
-              {mockData.risk_level} Risk
+              {report.risk_level} Risk
             </div>
           </div>
 
-          <div className="flex flex-col items-end">
-            <span className="text-xs font-semibold text-gray-500 uppercase">External Verification</span>
-            <span className="text-sm font-medium text-gray-400 italic">No portal checks executed</span>
+          <div className="flex flex-col items-end gap-1.5">
+            <span className="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1">
+              <Globe className="w-3.5 h-3.5" /> External Verification
+            </span>
+            {report.portal_checks && report.portal_checks.length > 0 ? (
+              <div className="flex gap-1.5 flex-wrap justify-end">
+                {report.portal_checks.map(pc => {
+                  const s = getPortalStatusStyles(pc.status);
+                  const shortName = PORTAL_CHECK_SHORT[pc.check_id] || pc.check_id;
+                  const evidenceDisplay = pc.evidence
+                    ? (pc.evidence.length > 14 ? pc.evidence.slice(0, 12) + '…' : pc.evidence)
+                    : '—';
+                  return (
+                    <div
+                      key={pc.check_id}
+                      title={pc.detail}
+                      className={`flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-medium ${s.badge}`}
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${s.dot}`} />
+                      <span className="font-bold">{shortName}</span>
+                      <span className="opacity-70">{evidenceDisplay}</span>
+                      {!pc.is_live && (
+                        <span className="ml-0.5 text-[9px] font-semibold uppercase tracking-wide opacity-60">mock</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <span className="text-sm font-medium text-gray-400 italic">No portal checks executed</span>
+            )}
           </div>
         </div>
 
-        {mockData.mandatory_hard_fail && (
+        {report.mandatory_hard_fail && (
           <div className="bg-red-50 border-l-4 border-red-500 text-red-800 p-3 text-sm font-medium flex items-start gap-2 rounded-r-md">
             <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
             <div>
-              <strong className="block mb-0.5">Mandatory requirement(s) failed: {mockData.failed_mandatory_requirements.join(', ')}.</strong> 
+              <strong className="block mb-0.5">Mandatory requirement(s) failed: {report.failed_mandatory_requirements.join(', ')}.</strong> 
               Recommend rejection pending officer review.
             </div>
           </div>
@@ -147,15 +233,15 @@ export default function BidDashboard({ bidderName }) {
           <div className="p-5 flex flex-col gap-6">
             <div className="flex gap-2">
               <div className="flex-1 bg-green-50 border border-green-200 rounded p-3 flex flex-col items-center">
-                <span className="text-2xl font-bold text-green-700">{mockData.summary.compliant}</span>
+                <span className="text-2xl font-bold text-green-700">{summaryCount.compliant}</span>
                 <span className="text-xs font-semibold text-green-800 uppercase">Compliant</span>
               </div>
               <div className="flex-1 bg-red-50 border border-red-200 rounded p-3 flex flex-col items-center">
-                <span className="text-2xl font-bold text-red-700">{mockData.summary.non_compliant}</span>
+                <span className="text-2xl font-bold text-red-700">{summaryCount.non_compliant}</span>
                 <span className="text-xs font-semibold text-red-800 uppercase">Failed</span>
               </div>
               <div className="flex-1 bg-yellow-50 border border-yellow-200 rounded p-3 flex flex-col items-center">
-                <span className="text-2xl font-bold text-yellow-700">{mockData.summary.inconclusive}</span>
+                <span className="text-2xl font-bold text-yellow-700">{summaryCount.inconclusive}</span>
                 <span className="text-xs font-semibold text-yellow-800 uppercase text-center leading-tight mt-1">Review</span>
               </div>
             </div>
@@ -168,7 +254,11 @@ export default function BidDashboard({ bidderName }) {
               <div className="flex flex-col text-sm">
                 <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
                   <div className="flex items-center gap-2 text-gray-600"><FileText className="w-4 h-4" /> Documents</div>
-                  <span className="font-mono font-medium">{categories.documents.passed} of {categories.documents.total} verified</span>
+                  <span className="font-mono font-medium">
+                    {categories.documents.total === 0
+                      ? 'N/A'
+                      : `${categories.documents.passed} of ${categories.documents.total} verified`}
+                  </span>
                 </div>
                 <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
                   <div className="flex items-center gap-2 text-gray-600"><ShieldCheck className="w-4 h-4" /> Eligibility checks</div>
@@ -176,7 +266,11 @@ export default function BidDashboard({ bidderName }) {
                 </div>
                 <div className="px-3 py-2 flex items-center justify-between">
                   <div className="flex items-center gap-2 text-gray-600"><Settings className="w-4 h-4" /> Technical specs</div>
-                  <span className="font-mono font-medium">{categories.technical.passed} of {categories.technical.total} passed</span>
+                  <span className="font-mono font-medium">
+                    {categories.technical.total === 0
+                      ? 'N/A'
+                      : `${categories.technical.passed} of ${categories.technical.total} passed`}
+                  </span>
                 </div>
               </div>
             </div>
