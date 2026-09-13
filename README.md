@@ -16,7 +16,7 @@ Vecta is built on a decoupled, modern technology stack:
   A high-throughput API server that manages document orchestration, chunking, and AI integration.
   
 - **Ingestion & Extraction Engine**
-  Uses `PyMuPDF` for high-fidelity, layout-aware PDF text extraction, coupled with OCR fallback for scanned or image-based submissions.
+  Uses `PyMuPDF` for high-fidelity, layout-aware PDF text extraction, coupled with `Gemini Vision` fallback. This ensures that even scanned, non-searchable, or image-based bidder documents are converted to text using multimodal LLM capabilities and accurately ingested.
   
 - **Evaluation Core (Hybrid NLP + LLM)**
   Combines deterministic heuristics (Regex, multi-line pattern matching, spatial table analysis) for rigid requirements with Google's Gemini 2.5 Flash API for nuanced, semantic clause evaluations.
