@@ -119,6 +119,17 @@ export default function IndividualBidderView({ report, onOverride }) {
         </div>
       )}
 
+      {/* Scanned Document Banner */}
+      {report.is_scanned_document && (
+        <div className="bg-blue-50 border border-blue-200 rounded p-space-md flex items-start gap-space-sm text-blue-900">
+          <span className="material-symbols-outlined text-blue-700">document_scanner</span>
+          <div className="flex flex-col">
+            <span className="font-bold text-[14px]">Scanned Document Detected</span>
+            <span className="text-[13px] mt-1">This bidder's document contained no selectable text. Data was extracted via Vision OCR fallback.</span>
+          </div>
+        </div>
+      )}
+
       {/* 3-Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-md items-start">
         
@@ -212,9 +223,18 @@ export default function IndividualBidderView({ report, onOverride }) {
               </div>
 
               <div className={`p-space-md rounded border flex flex-col gap-1 ${getStatusColor(selectedItem.verdict)}`}>
-                <div className="flex items-center gap-2 font-mono-data-sm text-[12px] font-bold">
-                  <span className="material-symbols-outlined">{getIcon(selectedItem.verdict)}</span>
-                  {selectedItem.verdict}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-mono-data-sm text-[12px] font-bold">
+                    <span className="material-symbols-outlined">{getIcon(selectedItem.verdict)}</span>
+                    {selectedItem.verdict}
+                  </div>
+                  {/* LLM Extracted Badge */}
+                  {selectedItem.evidence?.bidder?.method === "llm_fallback" && (
+                    <div className="flex items-center gap-1 bg-amber-50 border border-amber-300 text-amber-900 px-2 py-0.5 rounded text-[10px] font-bold">
+                      <span className="material-symbols-outlined text-[14px]">psychiatry</span>
+                      AI EXTRACTED
+                    </div>
+                  )}
                 </div>
                 {selectedItem.ai_verdict && selectedItem.ai_verdict !== selectedItem.verdict && (
                   <div className="text-[10px] opacity-80 mt-1 pl-6 line-through">
@@ -272,8 +292,15 @@ export default function IndividualBidderView({ report, onOverride }) {
                           {/* Structured numeric comparison */}
                           {selectedItem.evidence.bidder.extracted_value !== undefined && (
                             <div className="flex flex-col gap-0.5 mb-1 bg-white/60 rounded p-1 border border-amber-200">
-                              <div className="font-mono-data-sm text-[11px] font-bold text-primary">
-                                Extracted: {selectedItem.evidence.bidder.extracted_value} {selectedItem.evidence.bidder.unit}
+                              <div className="flex items-center justify-between">
+                                <div className="font-mono-data-sm text-[11px] font-bold text-primary">
+                                  Extracted: {selectedItem.evidence.bidder.extracted_value} {selectedItem.evidence.bidder.unit}
+                                </div>
+                                {selectedItem.evidence.bidder.method === "llm_fallback" && selectedItem.evidence.bidder.llm_confidence && (
+                                  <div className="font-mono-data-sm text-[9px] font-bold text-amber-700 bg-amber-100 px-1 py-0.5 rounded">
+                                    Conf: {(selectedItem.evidence.bidder.llm_confidence * 100).toFixed(0)}%
+                                  </div>
+                                )}
                               </div>
                               <div className="font-mono-data-sm text-[11px] text-on-surface-variant">
                                 Required: ≥ {selectedItem.evidence.bidder.required_value} {selectedItem.evidence.bidder.unit}
@@ -283,8 +310,15 @@ export default function IndividualBidderView({ report, onOverride }) {
                           {/* DOCUMENT_PRESENT */}
                           {selectedItem.evidence.bidder.document_found !== undefined && (
                             <div className="flex flex-col gap-0.5 mb-1 bg-white/60 rounded p-1 border border-amber-200">
-                              <div className="font-mono-data-sm text-[11px] font-bold text-primary">
-                                Status: {selectedItem.evidence.bidder.document_found ? "Document Found" : "Document Not Found"}
+                              <div className="flex items-center justify-between">
+                                <div className="font-mono-data-sm text-[11px] font-bold text-primary">
+                                  Status: {selectedItem.evidence.bidder.document_found ? "Document Found" : "Document Not Found"}
+                                </div>
+                                {selectedItem.evidence.bidder.method === "llm_fallback" && selectedItem.evidence.bidder.llm_confidence && (
+                                  <div className="font-mono-data-sm text-[9px] font-bold text-amber-700 bg-amber-100 px-1 py-0.5 rounded">
+                                    Conf: {(selectedItem.evidence.bidder.llm_confidence * 100).toFixed(0)}%
+                                  </div>
+                                )}
                               </div>
                             </div>
                           )}

@@ -19,7 +19,8 @@ from parser_main import (
     call_llm,
     check_mii_class1,
     check_mse_preference,
-    SEMANTIC_CONFIDENCE_THRESHOLD
+    SEMANTIC_CONFIDENCE_THRESHOLD,
+    check_document_sanity
 )
 from portal_checks import run_portal_checks
 
@@ -27,7 +28,7 @@ app = FastAPI(title="Vecta Compliance API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -59,6 +60,16 @@ async def analyze(
         tender_path = os.path.join(tmpdir, "tender.pdf")
         with open(tender_path, "wb") as f:
             shutil.copyfileobj(tender.file, f)
+            
+        tender_sanity = check_document_sanity(tender_path)
+        if not tender_sanity["ok"]:
+            return JSONResponse(
+                status_code=422,
+                content={
+                    "error": tender_sanity["error_code"],
+                    "detail": f"Tender document rejected: {tender_sanity['reason']}"
+                }
+            )
 
         reqs = extract_tender_reqs(tender_path)
 
@@ -126,9 +137,30 @@ async def analyze(
 
             with open(bidder_path, "wb") as f:
                 shutil.copyfileobj(bidder_file.file, f)
+                
+            bidder_sanity = check_document_sanity(bidder_path)
+            if not bidder_sanity["ok"]:
+                # Don't abort the whole batch — create a stub report flagging this bidder
+                stub_report = {
+                    "bid_id": bid_id_value,
+                    "bidder_name": bidder_display_name,
+                    "compliance_score": "N/A",
+                    "coverage": 0,
+                    "risk_level": "High",
+                    "mandatory_hard_fail": True,
+                    "failed_mandatory_requirements": ["DOCUMENT_SANITY"],
+                    "recommendation": f"Document rejected: {bidder_sanity['reason']}",
+                    "line_items": [],
+                    "portal_checks": [],
+                    "extraction_error": True,
+                    "extraction_error_detail": bidder_sanity["reason"],
+                    "document_error_code": bidder_sanity["error_code"],
+                }
+                reports.append(stub_report)
+                continue  # skip to next bidder
 
             # Claim extraction
-            raw_text, claims = extract_bidder_claims(bidder_path)
+            raw_text, claims, is_scanned = extract_bidder_claims(bidder_path)
             tech_spec_claims, tech_spec_reqs = extract_tech_spec_table(bidder_path)
             claims.update(tech_spec_claims)
 
@@ -143,6 +175,8 @@ async def analyze(
             # Verdict engine
             verdicts = {}
             for req in bidder_reqs:
+                if req["type"] == "POLICY":
+                    continue
                 r_id = req["id"]
                 verdicts[r_id] = evaluate(claims.get(r_id), req)
 
@@ -153,55 +187,57 @@ async def analyze(
 
             # Policy checks
             # --- POLICY-001: Local Content (MII Class 1) ---
-            # _extract_local_content returns None when no value found in PDF.
-            # If absent: INCONCLUSIVE (bidder must clarify). Only NON_COMPLIANT
-            # if a value was actually found and it fails the threshold.
-            local_content_pct = _extract_local_content(raw_text)
-            if local_content_pct is None:
-                verdicts["POLICY-001"] = {
-                    "verdict": "INCONCLUSIVE",
-                    "reason": "No local content percentage found in the bidder's document.",
-                    "review_reason": "Bidder must declare local content % explicitly (e.g., 'Local content declared: 62%'). Cannot confirm or deny Class 1 compliance.",
-                    "requires_human_review": True,
-                }
-            else:
-                verdicts["POLICY-001"] = check_mii_class1(local_content_pct)
+            if any(r["id"] == "POLICY-001" for r in reqs):
+                # _extract_local_content returns None when no value found in PDF.
+                # If absent: INCONCLUSIVE (bidder must clarify). Only NON_COMPLIANT
+                # if a value was actually found and it fails the threshold.
+                local_content_pct = _extract_local_content(raw_text)
+                if local_content_pct is None:
+                    verdicts["POLICY-001"] = {
+                        "verdict": "INCONCLUSIVE",
+                        "reason": "No local content percentage found in the bidder's document.",
+                        "review_reason": "Bidder must declare local content % explicitly (e.g., 'Local content declared: 62%'). Cannot confirm or deny Class 1 compliance.",
+                        "requires_human_review": True,
+                    }
+                else:
+                    verdicts["POLICY-001"] = check_mii_class1(local_content_pct)
 
             # --- POLICY-002: Udyam / MSE Preference ---
-            # Wire to the Udyam portal adapter result, not PDF text extraction.
-            # Adapter status semantics:
-            #   VERIFIED   → Udyam number found and format valid  (treat as confirmed present)
-            #   FAILED     → Udyam number found but format invalid (non-compliant)
-            #   UNVERIFIED → No Udyam number found at all         (INCONCLUSIVE — absent ≠ fail)
-            #   MOCKED     → Format OK but live portal not called  (INCONCLUSIVE — needs officer check)
-            udyam_check = next(
-                (c for c in portal_check_results if c["check_id"] == "UDYAM_REGISTRATION"),
-                None,
-            )
-            udyam_status = udyam_check["status"] if udyam_check else "UNVERIFIED"
+            if any(r["id"] == "POLICY-002" for r in reqs):
+                # Wire to the Udyam portal adapter result, not PDF text extraction.
+                # Adapter status semantics:
+                #   VERIFIED   → Udyam number found and format valid  (treat as confirmed present)
+                #   FAILED     → Udyam number found but format invalid (non-compliant)
+                #   UNVERIFIED → No Udyam number found at all         (INCONCLUSIVE — absent ≠ fail)
+                #   MOCKED     → Format OK but live portal not called  (INCONCLUSIVE — needs officer check)
+                udyam_check = next(
+                    (c for c in portal_check_results if c["check_id"] == "UDYAM_REGISTRATION"),
+                    None,
+                )
+                udyam_status = udyam_check["status"] if udyam_check else "UNVERIFIED"
 
-            if udyam_status == "VERIFIED":
-                # Number found and format valid — treat as registered for policy scoring
-                verdicts["POLICY-002"] = check_mse_preference(True, True)
-            elif udyam_status == "FAILED":
-                # Number present but structurally invalid — confirmed fail
-                verdicts["POLICY-002"] = {
-                    "verdict": "NON_COMPLIANT",
-                    "reason": f"Udyam number found but failed format validation: {udyam_check.get('detail', '')}",
-                }
-            else:
-                # UNVERIFIED (no number found) or MOCKED (found but live portal not called).
-                # Either way, we cannot confirm registration — INCONCLUSIVE, not auto-fail.
-                detail = udyam_check.get("detail", "Udyam registration status could not be confirmed.") if udyam_check else "Udyam check not executed."
-                verdicts["POLICY-002"] = {
-                    "verdict": "INCONCLUSIVE",
-                    "reason": detail,
-                    "review_reason": (
-                        "Udyam registration could not be confirmed from the document or portal adapter. "
-                        "Officer must verify manually via the Udyam portal before awarding MSE preference."
-                    ),
-                    "requires_human_review": True,
-                }
+                if udyam_status == "VERIFIED":
+                    # Number found and format valid — treat as registered for policy scoring
+                    verdicts["POLICY-002"] = check_mse_preference(True, True)
+                elif udyam_status == "FAILED":
+                    # Number present but structurally invalid — confirmed fail
+                    verdicts["POLICY-002"] = {
+                        "verdict": "NON_COMPLIANT",
+                        "reason": f"Udyam number found but failed format validation: {udyam_check.get('detail', '')}",
+                    }
+                else:
+                    # UNVERIFIED (no number found) or MOCKED (found but live portal not called).
+                    # Either way, we cannot confirm registration — INCONCLUSIVE, not auto-fail.
+                    detail = udyam_check.get("detail", "Udyam registration status could not be confirmed.") if udyam_check else "Udyam check not executed."
+                    verdicts["POLICY-002"] = {
+                        "verdict": "INCONCLUSIVE",
+                        "reason": detail,
+                        "review_reason": (
+                            "Udyam registration could not be confirmed from the document or portal adapter. "
+                            "Officer must verify manually via the Udyam portal before awarding MSE preference."
+                        ),
+                        "requires_human_review": True,
+                    }
 
             # Flag extraction failure: if no claims were produced, the PDF
             # was likely corrupt, empty, or not parseable — surface this explicitly
@@ -256,6 +292,10 @@ async def analyze(
                     "The document may be scanned (image-only), password-protected, or "
                     "not contain the expected clause text. Manual review is required."
                 )
+                
+            if is_scanned:
+                report["is_scanned_document"] = True
+                report["extraction_note"] = "One or more pages in this document contained no selectable text and were processed via OCR fallback. Results may be less accurate than native PDF extraction."
 
             # Enrich line_items with evidence from claims so the frontend
             # can populate the evidence inspector pane without guessing.
@@ -281,6 +321,14 @@ async def analyze(
                     # For DOCUMENT_PRESENT claims, surface presence flag
                     if req_obj and req_obj.get("type") == "DOCUMENT_PRESENT" and "present" in claim:
                         bidder_evidence["document_found"] = claim["present"]
+
+                    # Pass LLM Fallback extraction metadata if present
+                    if claim.get("method") == "llm_fallback":
+                        bidder_evidence["method"] = "llm_fallback"
+                        if "llm_confidence" in claim:
+                            bidder_evidence["llm_confidence"] = claim["llm_confidence"]
+                        if "llm_reasoning" in claim:
+                            bidder_evidence["llm_reasoning"] = claim["llm_reasoning"]
 
                     # For SEMANTIC claims, surface confidence and LLM reasoning
                     if req_obj and req_obj.get("type") == "SEMANTIC" and "judgment" in claim:
