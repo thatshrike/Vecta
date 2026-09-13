@@ -1,96 +1,124 @@
 import React, { useState } from 'react';
 
-export default function LoginDashboard({ onLogin }) {
+const LoginDashboard = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Fixed frontend-only credentials
-    if (username === 'admin' && password === 'password') {
-      setError('');
-      onLogin();
+    setIsLoading(true);
+    setError('');
+
+    // Fixed mock credentials
+    if (username === 'admin' && password === 'admin123') {
+      setTimeout(() => {
+        onLogin({
+          name: 'Rajesh Verma',
+          role: 'Director (Procurement)',
+          department: 'MoD',
+          username: username
+        });
+      }, 600); // simulate network delay
     } else {
-      setError('Invalid credentials. Please try again.');
+      setTimeout(() => {
+        setIsLoading(false);
+        setError('Invalid credentials. Please use admin / admin123');
+      }, 600);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center relative overflow-hidden">
-      {/* Dynamic Background */}
-      <div className="absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-background"></div>
+    <div className="min-h-screen bg-[#030811] flex items-center justify-center p-4 relative overflow-hidden text-on-primary">
+      {/* Background Ambience */}
+      <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-secondary/10 rounded-full blur-[100px]" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary/10 rounded-full blur-[100px]" />
       </div>
 
-      <div className="z-10 w-full max-w-md bg-surface-container-low border border-outline-variant p-8 rounded-xl shadow-2xl flex flex-col items-center">
-        {/* Logo Integration */}
-        <div className="w-24 h-24 mb-6">
-          <img src="/logo.svg" alt="Platform Logo" className="w-full h-full drop-shadow-md" />
+      <div className="z-10 w-full max-w-md bg-surface-container-low border border-outline-variant/30 rounded-2xl shadow-2xl p-8 backdrop-blur-sm">
+        <div className="flex flex-col items-center mb-8">
+          <img src="/logo.svg" alt="Vecta Shield" className="w-24 h-24 mb-4 drop-shadow-2xl" />
+          <h1 className="font-headline-lg text-2xl font-bold tracking-tight text-secondary">VECTA</h1>
+          <h2 className="font-label-caps text-xs tracking-[0.2em] text-on-surface-variant uppercase mt-1">
+            GeM Institutional Enclave
+          </h2>
         </div>
 
-        <h1 className="font-headline-md text-2xl text-primary font-bold tracking-tight mb-2 text-center">
-          Vecta Platform
-        </h1>
-        <p className="font-body-sm text-on-surface-variant text-center mb-8">
-          GeM Institutional Procurement <br />
-          Technical Evaluation Pipeline
-        </p>
-
-        <form onSubmit={handleSubmit} className="w-full flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
-            <label className="font-label-caps text-[11px] font-bold text-on-surface-variant uppercase">
-              Username
-            </label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter 'admin'"
-              className="bg-surface-bright border border-outline-variant rounded p-3 font-body-sm text-[14px] text-primary focus:outline-none focus:border-secondary transition-colors"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label className="font-label-caps text-[11px] font-bold text-on-surface-variant uppercase">
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter 'password'"
-              className="bg-surface-bright border border-outline-variant rounded p-3 font-body-sm text-[14px] text-primary focus:outline-none focus:border-secondary transition-colors"
-            />
-          </div>
-
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           {error && (
-            <div className="mt-2 p-3 rounded bg-error/10 border border-error/20 text-error font-body-sm text-sm">
-              <span className="material-symbols-outlined text-[16px] inline-block align-text-bottom mr-1">
-                error
-              </span>
+            <div className="bg-error/10 border border-error/20 text-error p-3 rounded-md font-body-sm text-sm text-center">
               {error}
             </div>
           )}
 
+          <div className="flex flex-col gap-1.5">
+            <label className="font-label-caps text-xs text-on-surface-variant uppercase tracking-wider pl-1">
+              Govt. Username
+            </label>
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50 text-[18px]">
+                person
+              </span>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full bg-[#081422] border border-outline-variant/30 rounded-lg py-2.5 pl-10 pr-4 text-on-primary font-body-md focus:border-secondary focus:ring-1 focus:ring-secondary/50 focus:outline-none transition-all placeholder:text-on-surface-variant/30"
+                placeholder="admin"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="font-label-caps text-xs text-on-surface-variant uppercase tracking-wider pl-1">
+              Passphrase
+            </label>
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50 text-[18px]">
+                lock
+              </span>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-[#081422] border border-outline-variant/30 rounded-lg py-2.5 pl-10 pr-4 text-on-primary font-body-md focus:border-secondary focus:ring-1 focus:ring-secondary/50 focus:outline-none transition-all placeholder:text-on-surface-variant/30"
+                placeholder="••••••••"
+                required
+              />
+            </div>
+          </div>
+
           <button
             type="submit"
-            className="mt-4 bg-secondary hover:bg-secondary/90 text-on-primary font-bold py-3 rounded flex items-center justify-center gap-2 transition-colors shadow-sm"
+            disabled={isLoading}
+            className="mt-4 w-full bg-gradient-to-r from-[#d8a340] to-[#b88424] hover:from-[#f3cb75] hover:to-[#c99732] text-[#030811] font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-secondary/20 disabled:opacity-70"
           >
-            Authenticate <span className="material-symbols-outlined text-[18px]">login</span>
+            {isLoading ? (
+              <span className="w-5 h-5 border-2 border-[#030811]/30 border-t-[#030811] rounded-full animate-spin"></span>
+            ) : (
+              <>
+                <span className="material-symbols-outlined text-[20px]">login</span>
+                Secure Sign-In
+              </>
+            )}
           </button>
         </form>
-      </div>
 
-      {/* Government Watermark Footer */}
-      <div className="absolute bottom-8 z-10 flex flex-col items-center gap-2 text-center opacity-60">
-        <div className="font-label-caps text-[10px] uppercase text-on-surface-variant tracking-widest">
-          Government of India
-        </div>
-        <div className="font-mono-data-sm text-[10px] text-stone-500">
-          Secure Access Portal • Authorized Personnel Only
+        <div className="mt-8 pt-6 border-t border-outline-variant/20 flex flex-col items-center gap-2">
+          <div className="flex items-center gap-2 text-on-surface-variant/60 font-mono-data-sm text-[10px]">
+            <span className="material-symbols-outlined text-[14px]">shield</span>
+            <span>RESTRICTED ACCESS • TIA GRADE A CLEARANCE REQUIRED</span>
+          </div>
+          <p className="text-[10px] text-on-surface-variant/40 text-center max-w-[280px]">
+            Unauthorized access to this portal is strictly prohibited under the Information Technology Act.
+          </p>
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default LoginDashboard;
