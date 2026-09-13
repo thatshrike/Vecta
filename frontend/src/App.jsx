@@ -136,30 +136,43 @@ export default function App() {
               onClick={(e) => { e.preventDefault(); setView('upload'); }}
               className={`px-space-md py-space-sm rounded transition-all cursor-pointer ${view === 'upload' ? 'bg-primary text-on-primary font-semibold shadow-[0_1px_4px_rgba(0,0,0,0.06)] border-l-4 border-amber-500' : 'font-body-sm text-body-sm text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'}`}
             >
-              Ingestion Workspace
+              Workspace
             </a>
             <a
               aria-current={view === 'results' ? 'page' : undefined}
               onClick={(e) => { e.preventDefault(); if (reports.length > 0) setView('results'); }}
               className={`px-space-md py-space-sm rounded transition-all ${view === 'results' ? 'bg-primary text-on-primary font-semibold shadow-[0_1px_4px_rgba(0,0,0,0.06)] border-l-4 border-amber-500' : 'font-body-sm text-body-sm text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'} ${reports.length === 0 ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
             >
-              Clause Evaluation Matrix
+              Evaluation Result
             </a>
-            <div className="px-space-md py-space-sm rounded font-body-sm text-body-sm text-on-surface-variant opacity-40 cursor-not-allowed select-none" title="Coming in future release">
-              More features coming soon
-            </div>
           </nav>
         </div>
       </aside>
 
       {/* Main Content Area */}
       <div className="pl-64">
-        <main className="relative pt-16 w-full bg-background min-h-screen">
-          {view === 'upload' ? (
-            <UploadDashboard onComplete={handleAnalysisComplete} />
-          ) : (
-            <ResultsDashboard reports={reports} />
-          )}
+        <main className="relative pt-16 w-full bg-background min-h-screen flex flex-col">
+          <div className="flex-1">
+            {view === 'upload' ? (
+              <UploadDashboard onComplete={handleAnalysisComplete} />
+            ) : (
+              <ResultsDashboard reports={reports} />
+            )}
+          </div>
+          
+          {/* Global Footer */}
+          <footer className="w-full mt-auto bg-surface-container-low/30 border-t border-outline-variant/30 py-space-md px-gutter">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-on-surface-variant font-mono-data-sm text-[11px] opacity-70">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[14px]">shield</span>
+                <span>VECTA GeM Enclave • Secure Technical Evaluation Workspace</span>
+              </div>
+              <div className="flex items-center gap-4">
+                <span>v1.0.0 (AI Bid Intelligence Engine)</span>
+                <span>&copy; {new Date().getFullYear()} Government of India</span>
+              </div>
+            </div>
+          </footer>
         </main>
       </div>
     </div>

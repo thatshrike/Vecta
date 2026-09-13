@@ -99,7 +99,7 @@ export default function UploadDashboard({ onComplete }) {
 
       const derivedNames = bidderFiles.map(b => b.derivedName);
       formData.append('bidder_names', JSON.stringify(derivedNames));
-      
+
       const vendorIds = bidderFiles.map(b => b.vendorId);
       formData.append('vendor_ids', JSON.stringify(vendorIds));
 
@@ -200,7 +200,7 @@ export default function UploadDashboard({ onComplete }) {
       <div className="pb-space-xl flex flex-col xl:flex-row items-start gap-space-lg">
         {/* Left Operational Rail */}
         <aside className="w-full xl:w-[380px] shrink-0 flex flex-col gap-space-lg xl:sticky xl:top-[128px]">
-          
+
           {/* Tender Master Document */}
           <section className="bg-surface-container-lowest border border-outline-variant rounded p-space-md shadow-sm">
             <div className="flex items-center justify-between pb-space-xs mb-space-sm border-b border-outline-variant">
@@ -214,10 +214,10 @@ export default function UploadDashboard({ onComplete }) {
               </div>
               <span className="px-space-xs py-0.5 bg-amber-100 border border-amber-300 text-amber-900 font-mono-data-sm text-[10px] rounded font-medium">Benchmark Active</span>
             </div>
-            
+
             {!tenderFile ? (
-              <div 
-                onDragOver={e => e.preventDefault()} 
+              <div
+                onDragOver={e => e.preventDefault()}
                 onDrop={handleTenderDrop}
                 onClick={() => tenderInputRef.current.click()}
                 className="bg-surface-container-low border-2 border-dashed border-outline-variant p-space-lg rounded flex flex-col items-center justify-center gap-space-sm cursor-pointer hover:border-secondary hover:bg-surface-container transition-colors min-h-[140px]"
@@ -283,11 +283,10 @@ export default function UploadDashboard({ onComplete }) {
             <button
               onClick={handleRunAnalysis}
               disabled={!canRun || isSimulating}
-              className={`w-full py-space-md px-space-lg rounded font-body-md text-body-md font-bold transition-all flex items-center justify-center gap-space-sm border ${
-                (!canRun || isSimulating) 
-                  ? 'bg-surface-dim text-on-surface-variant border-outline cursor-not-allowed' 
+              className={`w-full py-space-md px-space-lg rounded font-body-md text-body-md font-bold transition-all flex items-center justify-center gap-space-sm border ${(!canRun || isSimulating)
+                  ? 'bg-surface-dim text-on-surface-variant border-outline cursor-not-allowed'
                   : 'bg-amber-700 hover:bg-amber-800 text-on-primary border-amber-600 shadow-md hover:shadow-lg'
-              }`}
+                }`}
             >
               {isSimulating ? (
                 <>
@@ -297,7 +296,7 @@ export default function UploadDashboard({ onComplete }) {
               ) : (
                 <>
                   <span className="material-symbols-outlined text-[20px]">play_arrow</span>
-                  <span>Start AI Evaluation & Extraction</span>
+                  <span>Start Evaluation</span>
                 </>
               )}
             </button>
@@ -333,8 +332,8 @@ export default function UploadDashboard({ onComplete }) {
                   <div className="flex items-center gap-space-sm flex-1">
                     <span className="w-7 h-7 rounded bg-amber-100 border border-amber-300 text-amber-900 font-mono-data text-mono-data font-bold flex items-center justify-center text-[12px]">B{idx + 1}</span>
                     <div className="flex items-center gap-space-xs flex-1 group">
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         value={bidder.derivedName}
                         onChange={(e) => handleNameChange(bidder.id, e.target.value)}
                         className="font-headline-sm text-[15px] font-bold text-primary bg-transparent border-b border-transparent hover:border-outline-variant focus:border-secondary focus:outline-none transition-colors max-w-full"
@@ -344,8 +343,8 @@ export default function UploadDashboard({ onComplete }) {
                       <span className="material-symbols-outlined text-[14px] text-stone-300 opacity-0 group-hover:opacity-100">edit</span>
                     </div>
                     <div className="flex items-center gap-space-xs w-[140px] group border-l border-outline-variant pl-space-sm">
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         value={bidder.vendorId}
                         onChange={(e) => handleVendorIdChange(bidder.id, e.target.value)}
                         className="font-mono-data-sm text-[12px] text-on-surface-variant bg-transparent border-b border-transparent hover:border-outline-variant focus:border-secondary focus:outline-none transition-colors w-full placeholder:text-amber-600"
@@ -354,7 +353,7 @@ export default function UploadDashboard({ onComplete }) {
                       />
                     </div>
                   </div>
-                  
+
                   {isSimulating ? (
                     <div className="flex items-center gap-2">
                       {simulationStatus[bidder.id] === 'pending' && <span className="font-mono-data-sm text-on-surface-variant">Waiting...</span>}
@@ -388,8 +387,8 @@ export default function UploadDashboard({ onComplete }) {
             {bidderError && <p className="text-sm text-error mt-2 font-body-sm flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">error</span> {bidderError}</p>}
           </div>
 
-          <div 
-            onDragOver={e => e.preventDefault()} 
+          <div
+            onDragOver={e => e.preventDefault()}
             onDrop={handleBidderDrop}
             onClick={() => bidderInputRef.current.click()}
             className="border-2 border-dashed border-amber-700/30 rounded-xl p-space-lg text-center cursor-pointer hover:border-secondary transition-colors bg-surface-container-low/50 flex flex-col items-center justify-center gap-space-xs"
