@@ -155,11 +155,11 @@ export default function UploadDashboard({ onComplete }) {
       <div className="bg-surface-container-lowest border-b border-outline-variant shadow-sm px-gutter py-space-md mb-space-lg flex flex-col xl:flex-row xl:items-center justify-between gap-space-md rounded-lg">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-space-xs font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">
-            <span>GeM Institutional Procurement</span>
+            <span>Vecta</span>
             <span className="text-outline-variant">/</span>
-            <span>Technical Evaluation Pipeline</span>
+            <span>Evaluation Pipeline</span>
             <span className="text-outline-variant">/</span>
-            <span className="text-secondary font-bold">Ingestion Engine</span>
+            <span className="text-primary font-bold">Ingestion</span>
           </div>
           <div className="flex items-center gap-space-sm">
             <span className="w-2.5 h-2.5 rounded-full bg-secondary animate-pulse"></span>
@@ -171,18 +171,22 @@ export default function UploadDashboard({ onComplete }) {
         {/* 3-Step Breadcrumb Progress Indicator */}
         <div className="flex items-center gap-space-xs bg-surface-container-low border border-outline-variant px-space-md py-space-xs rounded">
           <div className="flex items-center gap-space-xs">
-            <div className="w-6 h-6 rounded-full bg-secondary text-on-primary font-mono-data-sm text-mono-data-sm flex items-center justify-center font-bold">1</div>
+            <div className="w-6 h-6 rounded-full bg-secondary text-on-primary font-mono-data-sm text-mono-data-sm flex items-center justify-center font-bold">
+              {isSimulating ? <span className="material-symbols-outlined text-[14px]">check</span> : "1"}
+            </div>
             <div className="flex flex-col">
               <span className="font-label-caps text-label-caps uppercase text-secondary font-bold">Step 1: Ingestion</span>
-              <span className="font-mono-data-sm text-mono-data-sm text-on-surface-variant">Active Workspace</span>
+              <span className="font-mono-data-sm text-mono-data-sm text-on-surface-variant">{isSimulating ? "Complete" : "Active Workspace"}</span>
             </div>
           </div>
           <span className="material-symbols-outlined text-outline-variant text-[18px] px-1">chevron_right</span>
-          <div className="flex items-center gap-space-xs opacity-60">
-            <div className="w-6 h-6 rounded-full bg-surface-container-high text-on-surface-variant font-mono-data-sm text-mono-data-sm flex items-center justify-center">2</div>
+          <div className={`flex items-center gap-space-xs ${isSimulating ? '' : 'opacity-60'}`}>
+            <div className={`w-6 h-6 rounded-full font-mono-data-sm text-mono-data-sm flex items-center justify-center ${isSimulating ? 'bg-secondary text-on-primary font-bold' : 'bg-surface-container-high text-on-surface-variant'}`}>
+              {isSimulating ? <span className="material-symbols-outlined animate-spin text-[14px]">sync</span> : "2"}
+            </div>
             <div className="flex flex-col">
-              <span className="font-label-caps text-label-caps uppercase text-on-surface-variant">Step 2: OCR & Semantic</span>
-              <span className="font-mono-data-sm text-mono-data-sm text-on-surface-variant">Pending Run</span>
+              <span className={`font-label-caps text-label-caps uppercase ${isSimulating ? 'text-secondary font-bold' : 'text-on-surface-variant'}`}>Step 2: OCR & Semantic</span>
+              <span className="font-mono-data-sm text-mono-data-sm text-on-surface-variant">{isSimulating ? "Processing..." : "Pending Run"}</span>
             </div>
           </div>
           <span className="material-symbols-outlined text-outline-variant text-[18px] px-1">chevron_right</span>
@@ -205,14 +209,14 @@ export default function UploadDashboard({ onComplete }) {
           <section className="bg-surface-container-lowest border border-outline-variant rounded p-space-md shadow-sm">
             <div className="flex items-center justify-between pb-space-xs mb-space-sm border-b border-outline-variant">
               <div className="flex items-center gap-space-xs">
-                <span className="w-7 h-7 rounded bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-900 font-bold">
+                <span className="w-7 h-7 rounded bg-surface-container-high border border-outline-variant flex items-center justify-center text-on-surface font-bold">
                   <span className="material-symbols-outlined text-[18px]">assignment</span>
                 </span>
                 <div>
-                  <h2 className="font-headline-sm text-[15px] font-bold text-primary leading-tight">Tender Master Document</h2>
+                  <h2 className="font-headline-sm text-[15px] font-bold text-primary leading-tight">Master Document</h2>
                 </div>
               </div>
-              <span className="px-space-xs py-0.5 bg-amber-100 border border-amber-300 text-amber-900 font-mono-data-sm text-[10px] rounded font-medium">Benchmark Active</span>
+              <span className="px-space-xs py-0.5 bg-surface-container-high border border-outline-variant text-on-surface-variant font-mono-data-sm text-[10px] rounded font-medium">Active</span>
             </div>
 
             {!tenderFile ? (
@@ -269,7 +273,7 @@ export default function UploadDashboard({ onComplete }) {
                 <span className="font-semibold text-primary">{bidderFiles.length} Packets</span>
               </div>
               <div className="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
-                <div className="bg-gradient-to-r from-amber-600 to-amber-700 h-full transition-all" style={{ width: Math.min((bidderFiles.length / 5) * 100, 100) + '%' }}></div>
+                <div className="bg-primary h-full transition-all" style={{ width: Math.min((bidderFiles.length / 5) * 100, 100) + '%' }}></div>
               </div>
               <div className="flex items-center justify-between font-mono-data-sm text-mono-data-sm pt-1">
                 <span className="text-on-surface-variant">Estimated Processing Time</span>
@@ -285,7 +289,7 @@ export default function UploadDashboard({ onComplete }) {
               disabled={!canRun || isSimulating}
               className={`w-full py-space-md px-space-lg rounded font-body-md text-body-md font-bold transition-all flex items-center justify-center gap-space-sm border ${(!canRun || isSimulating)
                   ? 'bg-surface-dim text-on-surface-variant border-outline cursor-not-allowed'
-                  : 'bg-amber-700 hover:bg-amber-800 text-on-primary border-amber-600 shadow-md hover:shadow-lg'
+                  : 'bg-primary hover:bg-on-surface-variant text-on-primary border-primary shadow-sm hover:shadow-md'
                 }`}
             >
               {isSimulating ? (
@@ -317,7 +321,7 @@ export default function UploadDashboard({ onComplete }) {
               <p className="font-body-sm text-body-sm text-on-surface-variant">Upload technical packets, OEM authorizations, and compliance schedules.</p>
             </div>
             <div className="flex items-center gap-space-xs">
-              <button onClick={() => bidderInputRef.current.click()} className="px-space-md py-1.5 bg-secondary text-on-primary rounded font-body-sm text-body-sm font-semibold hover:bg-amber-800 transition-colors flex items-center gap-1 shadow-sm">
+              <button onClick={() => bidderInputRef.current.click()} className="px-space-md py-1.5 bg-surface-container-high text-on-surface border border-outline-variant rounded font-body-sm text-body-sm font-semibold hover:bg-surface-container-highest transition-colors flex items-center gap-1 shadow-sm">
                 <span className="material-symbols-outlined text-[16px]">add_circle</span>
                 Add Bidder Packet
               </button>
@@ -327,10 +331,10 @@ export default function UploadDashboard({ onComplete }) {
 
           <div className="flex-1 flex flex-col gap-space-md mb-space-lg">
             {bidderFiles.map((bidder, idx) => (
-              <div key={bidder.id} className="bg-surface-bright p-space-md rounded border border-outline-variant hover:border-amber-400 transition-colors shadow-sm">
+              <div key={bidder.id} className="bg-surface-bright p-space-md rounded border border-outline-variant hover:border-outline transition-colors shadow-sm">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-space-xs pb-space-xs border-b border-outline-variant">
                   <div className="flex items-center gap-space-sm flex-1">
-                    <span className="w-7 h-7 rounded bg-amber-100 border border-amber-300 text-amber-900 font-mono-data text-mono-data font-bold flex items-center justify-center text-[12px]">B{idx + 1}</span>
+                    <span className="w-7 h-7 rounded bg-surface-container-high border border-outline-variant text-on-surface font-mono-data text-mono-data font-bold flex items-center justify-center text-[12px]">B{idx + 1}</span>
                     <div className="flex items-center gap-space-xs flex-1 group">
                       <input
                         type="text"
@@ -391,12 +395,12 @@ export default function UploadDashboard({ onComplete }) {
             onDragOver={e => e.preventDefault()}
             onDrop={handleBidderDrop}
             onClick={() => bidderInputRef.current.click()}
-            className="border-2 border-dashed border-amber-700/30 rounded-xl p-space-lg text-center cursor-pointer hover:border-secondary transition-colors bg-surface-container-low/50 flex flex-col items-center justify-center gap-space-xs"
+            className="border-2 border-dashed border-outline-variant rounded-xl p-space-lg text-center cursor-pointer hover:border-outline transition-colors bg-surface-container-low flex flex-col items-center justify-center gap-space-xs"
           >
-            <div className="w-10 h-10 rounded-full bg-amber-100 border border-amber-300 text-secondary flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-surface-container-high border border-outline-variant text-on-surface-variant flex items-center justify-center">
               <span className="material-symbols-outlined text-[24px]">cloud_upload</span>
             </div>
-            <div className="font-body-md text-body-md font-semibold text-primary">Drag & drop additional bidder packets or technical schedules</div>
+            <div className="font-body-md text-body-md font-semibold text-primary">Drag & drop additional bidder packets</div>
             <div className="font-body-sm text-body-sm text-on-surface-variant">Supports multi-page searchable PDFs up to 100MB each</div>
           </div>
         </section>

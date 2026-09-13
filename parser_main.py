@@ -561,7 +561,14 @@ def extract_bidder_claims(pdf_path):
                             # REQ-001: Bidder Turnover (Numeric)
                             if 'REQ-001' not in claims and re.search(r'bidder\s+turnover|average\s+annual\s+turnover', criterion_cell, re.IGNORECASE):
                                 m_num = re.search(r"(Rs\.?|₹)?\s*([\d,.]+)\s*(Lakh|Lac|Crores?|Cr)?", submission_cell, re.IGNORECASE)
-                                if m_num:
+                                if status_cell in ('partial', '-', 'na', 'n/a', ''):
+                                    claims['REQ-001'] = {
+                                        "is_ambiguous": True,
+                                        "requires_human_review": True,
+                                        "review_reason": f"Table status column shows '{status_cell}' — neither a clear affirmative nor a clear denial.",
+                                        "evidence": { "document": pdf_path, "page": i + 1, "text": row_text }
+                                    }
+                                elif m_num:
                                     val_lakh = parse_unit_value(m_num.group(1), m_num.group(2), m_num.group(3))
                                     if val_lakh is not None:
                                         claims['REQ-001'] = {
@@ -579,7 +586,14 @@ def extract_bidder_claims(pdf_path):
                             # REQ-002: OEM Turnover (Numeric)
                             if 'REQ-002' not in claims and re.search(r'oem\s+(average\s+)?turnover', criterion_cell, re.IGNORECASE):
                                 m_num = re.search(r"(Rs\.?|₹)?\s*([\d,.]+)\s*(Lakh|Lac|Crores?|Cr)?", submission_cell, re.IGNORECASE)
-                                if m_num:
+                                if status_cell in ('partial', '-', 'na', 'n/a', ''):
+                                    claims['REQ-002'] = {
+                                        "is_ambiguous": True,
+                                        "requires_human_review": True,
+                                        "review_reason": f"Table status column shows '{status_cell}' — neither a clear affirmative nor a clear denial.",
+                                        "evidence": { "document": pdf_path, "page": i + 1, "text": row_text }
+                                    }
+                                elif m_num:
                                     val_lakh = parse_unit_value(m_num.group(1), m_num.group(2), m_num.group(3))
                                     if val_lakh is not None:
                                         claims['REQ-002'] = {
@@ -805,7 +819,13 @@ def evaluate(claim, req):
             }
     
     if req["type"] == "NUMERIC":
-        if claim["value"] >= req["value"]["min"]:
+        if claim.get("is_ambiguous"):
+            return {
+                "status": "INCONCLUSIVE",
+                "requires_human_review": True,
+                "review_reason": claim.get("review_reason", "Numeric claim was provided with ambiguous or partial status.")
+            }
+        if claim.get("value", 0) >= req["value"]["min"]:
             return {"status": "COMPLIANT"}
         return {"status": "NON_COMPLIANT"}
             

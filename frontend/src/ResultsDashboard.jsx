@@ -244,7 +244,7 @@ export default function ResultsDashboard({ reports }) {
                         <span className="font-label-caps text-label-caps text-on-surface-variant uppercase block mb-1">Technical Match Score</span>
                         {report.compliance_score === "N/A" ? (
                           <div className="flex items-center gap-1 mt-2 mb-1">
-                            <span className="font-headline-sm font-bold text-amber-700">Insufficient Data</span>
+                            <span className="font-headline-sm font-bold text-secondary">Insufficient Data</span>
                           </div>
                         ) : (
                           <div className="flex items-center gap-2">
@@ -259,7 +259,7 @@ export default function ResultsDashboard({ reports }) {
                         )}
                         <div className="flex items-center justify-between font-mono-data-sm text-[9px] text-on-surface-variant mt-1 leading-tight">
                           <span>Mandatory×3 + Scored×1 (Excludes pending manual reviews)</span>
-                          {report.pending_review_count > 0 && <span className="font-bold text-amber-700">{report.pending_review_count} Pending Review</span>}
+                          {report.pending_review_count > 0 && <span className="font-bold text-secondary">{report.pending_review_count} Pending Review</span>}
                         </div>
                       </div>
                       
@@ -286,12 +286,12 @@ export default function ResultsDashboard({ reports }) {
             <section className="bg-surface-container-lowest border border-outline-variant rounded shadow-sm overflow-hidden flex flex-col">
               <div className="p-space-lg border-b border-outline-variant flex items-center justify-between bg-surface-bright">
                 <div>
-                  <h2 className="font-headline-sm text-headline-sm font-bold text-primary">Statutory & Technical Clause Evaluation Matrix</h2>
+                  <h2 className="font-headline-sm text-headline-sm font-bold text-primary">Clause Evaluation Matrix</h2>
                   <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Side-by-side comparison of all evaluated clauses across bidders.</p>
                 </div>
                 <button 
                   onClick={() => generateCSV(localReports)}
-                  className="px-space-md py-1.5 bg-primary text-on-primary rounded font-body-sm font-semibold hover:bg-stone-800 transition-colors flex items-center gap-1 shadow-sm">
+                  className="px-space-md py-1.5 bg-primary text-on-primary rounded font-body-sm font-semibold hover:bg-on-surface-variant transition-colors flex items-center gap-1 shadow-sm">
                   <span className="material-symbols-outlined text-[16px]">download</span> Export Matrix (CSV)
                 </button>
               </div>

@@ -5,6 +5,28 @@ const LoginDashboard = ({ onLogin }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showModal, setShowModal] = useState(null);
+
+  const Modal = ({ title, content, onClose }) => (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col text-left">
+        <div className="flex items-center justify-between p-4 border-b border-outline-variant">
+          <h2 className="font-headline-sm text-lg font-bold text-primary">{title}</h2>
+          <button onClick={onClose} className="text-on-surface-variant hover:text-error transition-colors">
+            <span className="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <div className="p-6 overflow-y-auto text-sm text-on-surface whitespace-pre-wrap leading-relaxed">
+          {content}
+        </div>
+        <div className="p-4 border-t border-outline-variant bg-surface-container-low flex justify-end rounded-b-xl">
+          <button onClick={onClose} className="px-4 py-2 bg-primary text-on-primary rounded font-medium hover:bg-on-surface-variant transition-colors">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -15,9 +37,9 @@ const LoginDashboard = ({ onLogin }) => {
     if (username === 'admin' && password === 'admin123') {
       setTimeout(() => {
         onLogin({
-          name: 'Rajesh Verma',
-          role: 'Director (Procurement)',
-          department: 'MoD',
+          name: 'Demo User',
+          role: 'Administrator',
+          department: 'Operations',
           username: username
         });
       }, 600); // simulate network delay
@@ -30,93 +52,90 @@ const LoginDashboard = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#030811] flex items-center justify-center p-4 relative overflow-hidden text-on-primary">
-      {/* Background Ambience */}
-      <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-secondary/10 rounded-full blur-[100px]" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary/10 rounded-full blur-[100px]" />
-      </div>
-
-      <div className="z-10 w-full max-w-md bg-surface-container-low border border-outline-variant/30 rounded-2xl shadow-2xl p-8 backdrop-blur-sm">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+      <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-8">
-          <img src="/logo.svg" alt="Vecta Shield" className="w-24 h-24 mb-4 drop-shadow-2xl" />
-          <h1 className="font-headline-lg text-2xl font-bold tracking-tight text-secondary">VECTA</h1>
-          <h2 className="font-label-caps text-xs tracking-[0.2em] text-on-surface-variant uppercase mt-1">
-            GeM Institutional Enclave
+          <div className="w-12 h-12 rounded-lg flex items-center justify-center overflow-hidden shadow-sm mb-4">
+            <img src="/favicon.svg" alt="Vecta Logo" className="w-full h-full object-cover" />
+          </div>
+          <h1 className="font-headline-lg text-2xl font-bold tracking-tight text-on-surface">Log in to Vecta</h1>
+          <h2 className="text-sm text-on-surface-variant mt-2">
+            Enter your details below to continue
           </h2>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {error && (
-            <div className="bg-error/10 border border-error/20 text-error p-3 rounded-md font-body-sm text-sm text-center">
+            <div className="bg-error-container text-on-error-container p-3 rounded-md text-sm text-center">
               {error}
             </div>
           )}
 
           <div className="flex flex-col gap-1.5">
-            <label className="font-label-caps text-xs text-on-surface-variant uppercase tracking-wider pl-1">
-              Govt. Username
+            <label className="text-sm text-on-surface font-medium">
+              Username
             </label>
-            <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50 text-[18px]">
-                person
-              </span>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full bg-[#081422] border border-outline-variant/30 rounded-lg py-2.5 pl-10 pr-4 text-on-primary font-body-md focus:border-secondary focus:ring-1 focus:ring-secondary/50 focus:outline-none transition-all placeholder:text-on-surface-variant/30"
-                placeholder="admin"
-                required
-              />
-            </div>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full bg-surface-container-lowest border border-outline-variant rounded-md py-2 px-3 text-on-surface focus:border-outline focus:ring-1 focus:ring-outline focus:outline-none transition-all shadow-sm"
+              placeholder="admin"
+              required
+            />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="font-label-caps text-xs text-on-surface-variant uppercase tracking-wider pl-1">
-              Passphrase
+            <label className="text-sm text-on-surface font-medium">
+              Password
             </label>
-            <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50 text-[18px]">
-                lock
-              </span>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-[#081422] border border-outline-variant/30 rounded-lg py-2.5 pl-10 pr-4 text-on-primary font-body-md focus:border-secondary focus:ring-1 focus:ring-secondary/50 focus:outline-none transition-all placeholder:text-on-surface-variant/30"
-                placeholder="••••••••"
-                required
-              />
-            </div>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-surface-container-lowest border border-outline-variant rounded-md py-2 px-3 text-on-surface focus:border-outline focus:ring-1 focus:ring-outline focus:outline-none transition-all shadow-sm"
+              placeholder="••••••••"
+              required
+            />
           </div>
 
           <button
             type="submit"
             disabled={isLoading}
-            className="mt-4 w-full bg-gradient-to-r from-[#d8a340] to-[#b88424] hover:from-[#f3cb75] hover:to-[#c99732] text-[#030811] font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-secondary/20 disabled:opacity-70"
+            className="mt-2 w-full bg-primary hover:bg-on-surface-variant text-on-primary font-medium py-2.5 rounded-md flex items-center justify-center transition-all shadow-sm disabled:opacity-70"
           >
             {isLoading ? (
-              <span className="w-5 h-5 border-2 border-[#030811]/30 border-t-[#030811] rounded-full animate-spin"></span>
+              <span className="w-5 h-5 border-2 border-on-primary/30 border-t-on-primary rounded-full animate-spin"></span>
             ) : (
-              <>
-                <span className="material-symbols-outlined text-[20px]">login</span>
-                Secure Sign-In
-              </>
+              "Sign In"
             )}
           </button>
         </form>
 
-        <div className="mt-8 pt-6 border-t border-outline-variant/20 flex flex-col items-center gap-2">
-          <div className="flex items-center gap-2 text-on-surface-variant/60 font-mono-data-sm text-[10px]">
-            <span className="material-symbols-outlined text-[14px]">shield</span>
-            <span>RESTRICTED ACCESS • TIA GRADE A CLEARANCE REQUIRED</span>
-          </div>
-          <p className="text-[10px] text-on-surface-variant/40 text-center max-w-[280px]">
-            Unauthorized access to this portal is strictly prohibited under the Information Technology Act.
+        <div className="mt-8 text-center">
+          <p className="text-xs text-on-surface-variant">
+            By logging in, you agree to our{' '}
+            <button type="button" onClick={() => setShowModal('tos')} className="text-primary hover:underline font-medium">Terms of Service</button>
+            {' '}and{' '}
+            <button type="button" onClick={() => setShowModal('privacy')} className="text-primary hover:underline font-medium">Privacy Policy</button>.
           </p>
         </div>
       </div>
+
+      {showModal === 'tos' && (
+        <Modal 
+          title="Terms of Service" 
+          content="This is a placeholder for the Vecta Terms of Service.\n\n1. Acceptance of Terms\nBy accessing this software, you agree to be bound by these terms. If you disagree with any part of the terms, you may not access the service.\n\n2. Use License\nPermission is granted to temporarily use the software for evaluation purposes. This is the grant of a license, not a transfer of title.\n\n3. Disclaimer\nThe materials on Vecta's software are provided on an 'as is' basis. Vecta makes no warranties, expressed or implied.\n\n4. Limitations\nIn no event shall Vecta or its suppliers be liable for any damages arising out of the use or inability to use the materials on the software."
+          onClose={() => setShowModal(null)} 
+        />
+      )}
+      {showModal === 'privacy' && (
+        <Modal 
+          title="Privacy Policy" 
+          content="This is a placeholder for the Vecta Privacy Policy.\n\n1. Information Collection\nWe collect information to provide better services to all our users. We only collect information necessary to provide you with the service.\n\n2. Use of Information\nYour information is used solely for the purpose of identifying you within the application and improving our service.\n\n3. Data Security\nWe implement robust, industry-standard security measures to protect your data from unauthorized access, alteration, disclosure, or destruction.\n\n4. Third Parties\nWe do not share your personal information with companies, organizations, or individuals outside of Vecta without your explicit consent."
+          onClose={() => setShowModal(null)} 
+        />
+      )}
     </div>
   );
 };

@@ -1,185 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <defs>
-    <!-- Background Gradient: Deep Sovereign Navy / Slate Depth -->
-    <radialGradient id="bgGrad" cx="50%" cy="46%" r="65%">
-      <stop offset="0%" stop-color="#0e233f" />
-      <stop offset="55%" stop-color="#081528" />
-      <stop offset="100%" stop-color="#030811" />
-    </radialGradient>
+  <!-- Monochrome Obsidian & Platinum / Crisp High-Contrast Executive Theme -->
+  <rect width="512" height="512" rx="104" fill="#090d16" />
+  <rect width="464" height="464" x="24" y="24" rx="80" fill="none" stroke="#ffffff" stroke-opacity="0.06" stroke-width="1.5" />
 
-    <!-- Master Metallic Warm Gold Palette -->
-    <linearGradient id="goldPlate" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#fdf0cd" />
-      <stop offset="25%" stop-color="#e5b85c" />
-      <stop offset="55%" stop-color="#b88424" />
-      <stop offset="85%" stop-color="#d8a340" />
-      <stop offset="100%" stop-color="#885b0d" />
-    </linearGradient>
+  <!-- Left wing: Crisp Architectural Pure White -->
+  <path d="M 148 140 L 256 360 L 292 360 L 196 140 Z" fill="#ffffff" />
 
-    <linearGradient id="goldChiselLight" x1="20%" y1="0%" x2="80%" y2="100%">
-      <stop offset="0%" stop-color="#fffaea" />
-      <stop offset="40%" stop-color="#f3cb75" />
-      <stop offset="100%" stop-color="#9d6d13" />
-    </linearGradient>
+  <!-- Right wing: Slate Platinum / Polished Titanium Steel -->
+  <path d="M 364 140 L 256 360 L 220 360 L 316 140 Z" fill="#94a3b8" />
 
-    <linearGradient id="goldChiselDark" x1="80%" y1="0%" x2="20%" y2="100%">
-      <stop offset="0%" stop-color="#c99732" />
-      <stop offset="60%" stop-color="#8f5e0a" />
-      <stop offset="100%" stop-color="#553600" />
-    </linearGradient>
+  <!-- Center keystone cut -->
+  <polygon points="256,170 292,246 256,320 220,246" fill="#090d16" />
 
-    <linearGradient id="steelInner" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#112540" />
-      <stop offset="60%" stop-color="#091424" />
-      <stop offset="100%" stop-color="#040a13" />
-    </linearGradient>
+  <!-- Precision Aperture: Pure White Frost diamond -->
+  <polygon points="256,218 276,246 256,274 236,246" fill="#f8fafc" />
 
-    <!-- Emerald Integrity Accent -->
-    <linearGradient id="emeraldCore" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#10b981" />
-      <stop offset="100%" stop-color="#047857" />
-    </linearGradient>
-
-    <!-- Drop Shadow for Dimensional Crest Hierarchy -->
-    <filter id="crestShadow" x="-15%" y="-15%" width="130%" height="130%">
-      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#000000" flood-opacity="0.65" />
-    </filter>
-
-    <filter id="glowSubtle" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="4" result="blur" />
-      <feComposite in="SourceGraphic" in2="blur" operator="over" />
-    </filter>
-  </defs>
-
-  <!-- Base App Tile: Subtle Executive Curvature -->
-  <rect width="512" height="512" rx="116" fill="url(#bgGrad)" />
-  <rect width="508" height="508" x="2" y="2" rx="114" fill="none" stroke="url(#goldPlate)" stroke-width="1.25" stroke-opacity="0.3" />
-
-  <!-- Architectural Background Calibration Lathe (Subtle Security Watermark Grid) -->
-  <g opacity="0.18">
-    <circle cx="256" cy="256" r="198" fill="none" stroke="#e5b85c" stroke-width="0.75" />
-    <circle cx="256" cy="256" r="162" fill="none" stroke="#38bdf8" stroke-width="0.5" stroke-dasharray="3 6" />
-    <circle cx="256" cy="256" r="118" fill="none" stroke="#ffffff" stroke-width="0.5" stroke-opacity="0.5" />
-    <line x1="256" y1="48" x2="256" y2="464" stroke="#e5b85c" stroke-width="0.75" stroke-dasharray="4 8" />
-    <line x1="48" y1="256" x2="464" y2="256" stroke="#e5b85c" stroke-width="0.75" stroke-dasharray="4 8" />
-  </g>
-
-  <!-- MASTER EMBLEM: Seamless Integration of Sovereign Shield, Faceted "V" Monogram, and Verification Wheel -->
-  <g filter="url(#crestShadow)">
-
-    <!-- 1. Outer Escutcheon Armor (Unified Sovereign Silhouette) -->
-    <!-- Proportions refined: Clean geometric shield with purposeful taper -->
-    <path d="M 256 68
-             C 362 68 398 108 398 214
-             C 398 332 308 404 256 440
-             C 204 404 114 332 114 214
-             C 114 108 150 68 256 68 Z"
-          fill="url(#steelInner)"
-          stroke="url(#goldPlate)"
-          stroke-width="4.5"
-          stroke-linejoin="round" />
-
-    <!-- Inset Security Border Flute -->
-    <path d="M 256 84
-             C 346 84 378 118 378 212
-             C 378 316 298 384 256 418
-             C 214 384 134 316 134 212
-             C 134 118 166 84 256 84 Z"
-          fill="none"
-          stroke="#e5b85c"
-          stroke-width="1.2"
-          stroke-opacity="0.45" />
-
-    <!-- 2. THE MONOLITHIC "V" MONOGRAM (Integrated Structural Facets) -->
-    <!-- Left Beveled Cantilever (Light Facing Facet) -->
-    <path d="M 152 112
-             L 256 364
-             L 256 288
-             L 196 112 Z"
-          fill="url(#goldChiselLight)" />
-
-    <!-- Right Beveled Cantilever (Deep Shaded Facet) -->
-    <path d="M 360 112
-             L 256 364
-             L 256 288
-             L 316 112 Z"
-          fill="url(#goldChiselDark)" />
-
-    <!-- Center Razor Keystone Spine -->
-    <line x1="256" y1="288" x2="256" y2="364" stroke="#ffffff" stroke-width="1.75" stroke-linecap="round" opacity="0.9" />
-
-    <!-- Inner Architectural Apex Chevron / Inverted Diamond -->
-    <polygon points="256,112 216,112 256,192 296,112"
-             fill="#081422"
-             stroke="url(#goldPlate)"
-             stroke-width="2" />
-    <polygon points="256,120 228,120 256,176 284,120"
-             fill="url(#steelInner)" />
-
-    <!-- 3. CENTRAL STATUTORY VERIFICATION WHEEL (Calculated Ashok Dharma Chakra & AI Iris) -->
-    <g transform="translate(256, 206)">
-      <!-- Outer Wheel Rim & Bevel -->
-      <circle r="44" fill="#06121f" stroke="url(#goldPlate)" stroke-width="3" />
-      <circle r="38.5" fill="none" stroke="#38bdf8" stroke-width="0.8" stroke-opacity="0.4" stroke-dasharray="2 3" />
-      <circle r="35" fill="#08182b" stroke="#e5b85c" stroke-width="0.75" stroke-opacity="0.7" />
-
-      <!-- 16 Balanced Statutory Radiation Spokes -->
-      <g stroke="url(#goldPlate)" stroke-width="1.5" stroke-linecap="round" opacity="0.92">
-        <!-- 0, 90, 180, 270 -->
-        <line x1="0" y1="-34" x2="0" y2="-12" />
-        <line x1="0" y1="12" x2="0" y2="34" />
-        <line x1="-34" y1="0" x2="-12" y2="0" />
-        <line x1="12" y1="0" x2="34" y2="0" />
-
-        <!-- 45, 135, 225, 315 -->
-        <line x1="-24" y1="-24" x2="-8.5" y2="-8.5" />
-        <line x1="8.5" y1="8.5" x2="24" y2="24" />
-        <line x1="24" y1="-24" x2="8.5" y2="-8.5" />
-        <line x1="-8.5" y1="8.5" x2="-24" y2="24" />
-
-        <!-- 22.5, 67.5, 112.5, 157.5, 202.5, 247.5, 292.5, 337.5 -->
-        <line x1="12.2" y1="-29.5" x2="4.3" y2="-10.4" />
-        <line x1="-12.2" y1="29.5" x2="-4.3" y2="10.4" />
-        <line x1="29.5" y1="-12.2" x2="10.4" y2="-4.3" />
-        <line x1="-29.5" y1="12.2" x2="-10.4" y2="4.3" />
-
-        <line x1="-12.2" y1="-29.5" x2="-4.3" y2="-10.4" />
-        <line x1="12.2" y1="29.5" x2="4.3" y2="10.4" />
-        <line x1="-29.5" y1="-12.2" x2="-10.4" y2="-4.3" />
-        <line x1="29.5" y1="12.2" x2="10.4" y2="4.3" />
-      </g>
-
-      <!-- Center Evaluation Aperture & Core Diamond -->
-      <circle r="12" fill="#040b14" stroke="url(#goldPlate)" stroke-width="2" />
-      <polygon points="0,-6 6,0 0,6 -6,0" fill="#f59e0b" />
-      <circle r="2.5" fill="#ffffff" />
-    </g>
-
-    <!-- 4. BOTTOM COMPLIANCE INTEGRITY BULWARK (Integrated Shield Apex Pendant) -->
-    <g transform="translate(256, 388)">
-      <!-- Beveled Gold Housing Bracket seamlessly locking into the shield keel -->
-      <polygon points="0,-16 22,-3 16,14 0,22 -16,14 -22,-3" 
-               fill="#05101c" 
-               stroke="url(#goldPlate)" 
-               stroke-width="2" />
-      <!-- Cryptographic Emerald Core -->
-      <circle r="13" fill="url(#emeraldCore)" stroke="#34d399" stroke-width="1" />
-      <!-- Sharp Statutory Affirmation Checkmark -->
-      <path d="M -5.5 0 L -1.5 4.5 L 6 -3.5" 
-            fill="none" 
-            stroke="#ffffff" 
-            stroke-width="2.4" 
-            stroke-linecap="round" 
-            stroke-linejoin="round" />
-    </g>
-
-    <!-- 5. Geometric Precision Coordinates / Lathe Benchmarks (Subtle Heraldic Engravings) -->
-    <g opacity="0.5" stroke="#e5b85c" stroke-width="1">
-      <circle cx="166" cy="206" r="1.5" fill="#e5b85c" stroke="none" />
-      <line x1="160" y1="206" x2="172" y2="206" />
-      <circle cx="346" cy="206" r="1.5" fill="#e5b85c" stroke="none" />
-      <line x1="340" y1="206" x2="352" y2="206" />
-    </g>
-
-  </g>
+  <!-- Verification indicator: Minimalist Ice/Cobalt Core dot -->
+  <circle cx="256" cy="396" r="6" fill="#38bdf8" />
 </svg>

@@ -73,7 +73,7 @@ export default function IndividualBidderView({ report, onOverride }) {
           {report.compliance_score === "N/A" ? (
             <div className="flex flex-col items-center">
               <span className="font-label-caps text-[10px] text-on-surface-variant uppercase">Technical Match Score</span>
-              <span className="font-headline-sm font-bold text-amber-700 mt-1">Insufficient Data</span>
+              <span className="font-headline-sm font-bold text-secondary mt-1">Insufficient Data</span>
               <span className="font-mono-data-sm text-[9px] text-on-surface-variant mt-1">{report.pending_review_count} pending review</span>
             </div>
           ) : (
@@ -82,7 +82,9 @@ export default function IndividualBidderView({ report, onOverride }) {
               <div className="flex items-baseline gap-1">
                 <span className="font-headline-md text-headline-md font-bold text-primary">{report.compliance_score}%</span>
               </div>
-              <span className="font-mono-data-sm text-[9px] text-on-surface-variant mt-1">Coverage: {Math.round(report.coverage * 100)}%</span>
+              {typeof report.coverage === 'number' && !isNaN(report.coverage) && (
+                <span className="font-mono-data-sm text-[9px] text-on-surface-variant mt-1">Coverage: {Math.round(report.coverage * 100)}%</span>
+              )}
             </div>
           )}
           
@@ -121,11 +123,11 @@ export default function IndividualBidderView({ report, onOverride }) {
 
       {/* Scanned Document Banner */}
       {report.is_scanned_document && (
-        <div className="bg-blue-50 border border-blue-200 rounded p-space-md flex items-start gap-space-sm text-blue-900">
-          <span className="material-symbols-outlined text-blue-700">document_scanner</span>
+        <div className="bg-surface-container border border-outline-variant rounded p-space-md flex items-start gap-space-sm text-on-surface">
+          <span className="material-symbols-outlined text-primary">document_scanner</span>
           <div className="flex flex-col">
             <span className="font-bold text-[14px]">Scanned Document Detected</span>
-            <span className="text-[13px] mt-1">This bidder's document contained no selectable text. Data was extracted via Vision OCR fallback.</span>
+            <span className="text-[13px] mt-1 text-on-surface-variant">This bidder's document contained no selectable text. Data was extracted via Vision OCR fallback.</span>
           </div>
         </div>
       )}
@@ -285,13 +287,13 @@ export default function IndividualBidderView({ report, onOverride }) {
                     </div>
 
                     {/* Bidder Side */}
-                    <div className="flex flex-col gap-1 bg-amber-50 border-l-4 border-l-amber-400 rounded-r p-space-sm">
-                      <span className="font-label-caps text-[9px] font-bold text-amber-800 uppercase">Extracted (Bidder Submission)</span>
+                    <div className="flex flex-col gap-1 bg-surface-container-high border-l-4 border-l-primary rounded-r p-space-sm">
+                      <span className="font-label-caps text-[9px] font-bold text-primary uppercase">Extracted (Bidder Submission)</span>
                       {selectedItem.evidence?.bidder ? (
                         <>
                           {/* Structured numeric comparison */}
                           {selectedItem.evidence.bidder.extracted_value !== undefined && (
-                            <div className="flex flex-col gap-0.5 mb-1 bg-white/60 rounded p-1 border border-amber-200">
+                            <div className="flex flex-col gap-0.5 mb-1 bg-surface-container-lowest rounded p-1 border border-outline-variant">
                               <div className="flex items-center justify-between">
                                 <div className="font-mono-data-sm text-[11px] font-bold text-primary">
                                   Extracted: {selectedItem.evidence.bidder.extracted_value} {selectedItem.evidence.bidder.unit}

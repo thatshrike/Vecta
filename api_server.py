@@ -109,17 +109,117 @@ async def analyze(
                 content={"error": "bid_id_collision", "detail": f"Two bidder packets resolve to the same ID: {dupe!r}. Assign unique Vendor IDs or rename the files."},
             )
 
-        # 4. Process each bidder
-        for idx, bidder_file in enumerate(bidders):
-            # Normalize the filename fallback the same way UploadDashboard does:
-            # strip .pdf, strip leading "bidder_", replace underscores with spaces.
-            raw_filename_name = (
-                bidder_file.filename
+        def clean_bidder_name(filename: str) -> str:
+            return (
+                filename
                 .replace(".pdf", "")
                 .removeprefix("bidder_")
                 .replace("_", " ")
-                .upper()
+                .title()
             )
+
+        def extract_company_name(raw_text: str, fallback: str) -> str:
+            """
+            Extract the bidding company/organisation name from raw PDF text.
+            Strategy: robust multi-pattern regex first (no rate-limit risk),
+            LLM as fallback only when every regex misses.
+            """
+            import re as _re
+            head = raw_text[:4000]
+            
+            # Suffix group reused in multiple patterns
+            SUFFIX = r'(?:Pvt\.?\s*Ltd\.?|Private\s+Limited|Limited|Enterprises|Industries|Corporation|Solutions|Systems|Technologies|Traders|Suppliers|Associates|Services|Works|Company|Co\.)'
+
+            # Pattern 1: Bidder/Firm/Company Name label on one line, name on the NEXT line
+            # e.g. "Bidder / Firm Name\nSentinel Defence Systems Pvt. Ltd."
+            m = _re.search(
+                r'(?:Bidder\s*/?\s*Firm\s*Name|Bidder\s*Name|Firm\s*Name|Company\s*Name)\s*[:\-]?\s*\n\s*([A-Za-z0-9][A-Za-z0-9 \t,\.&()\-]{2,80}?)(?=\n|\r|$)',
+                head, _re.IGNORECASE
+            )
+            if m:
+                name = _re.sub(r'\s+', ' ', m.group(1)).strip()
+                if 3 < len(name) < 100 and not _re.search(r'\b(GSTIN|PAN|Bid|Tender|Date)\b', name, _re.I):
+                    return name.title()
+
+            # Pattern 2: Bidder/Firm/Company Name: XYZ (same line)
+            m = _re.search(
+                r'(?:Bidder\s*Name|Firm\s*Name|Company\s*Name)\s*[:\-]\s*(?:M/[Ss]\.?\s*)?([A-Za-z0-9][A-Za-z0-9\s,\.&()\-]{2,80}?)(?=\n|\r|$|\s{2,}|GSTIN|PAN)',
+                head, _re.IGNORECASE
+            )
+            if m:
+                name = _re.sub(r'\s+', ' ', m.group(1)).strip()
+                if 3 < len(name) < 100:
+                    return name.title()
+
+            # Pattern 3: M/s XYZ Pvt. Ltd. or M/s. ABC Limited
+            m = _re.search(
+                r'M/[Ss]\.?\s+([A-Za-z0-9][A-Za-z0-9\s,\.&()\-]{2,70}?' + SUFFIX + r')',
+                head, _re.IGNORECASE
+            )
+            if m:
+                return _re.sub(r'\s+', ' ', m.group(1)).strip().title()
+
+            # Pattern 4: "certify that M/s XYZ / XYZ has/is"
+            m = _re.search(
+                r'certif(?:y|ied)\s+that\s+(?:M/[Ss]\.?\s*)?([A-Za-z0-9][A-Za-z0-9\s,\.&()\-]{2,70}?' + SUFFIX + r')',
+                head, _re.IGNORECASE
+            )
+            if m:
+                return _re.sub(r'\s+', ' ', m.group(1)).strip().title()
+
+            # Pattern 5: "for and on behalf of, XYZ" (CA/signatory section)
+            m = _re.search(
+                r'(?:For\s+and\s+on\s+behalf\s+of[,\s]+)([A-Za-z0-9][A-Za-z0-9\s,\.&()\-]{2,70}?' + SUFFIX + r')',
+                head, _re.IGNORECASE
+            )
+            if m:
+                return _re.sub(r'\s+', ' ', m.group(1)).strip().title()
+
+            # ── Regex exhausted — call LLM as fallback ──────────────────────────
+            api_key = os.environ.get("GEMINI_API_KEY")
+            if not api_key:
+                return fallback
+
+            prompt = (
+                "You are extracting the name of the bidding company/organisation from a tender bid document.\n"
+                "Return ONLY the exact legal name as plain text — no extra words, no prefixes like 'M/s'.\n"
+                "If no company name is clearly present, return exactly: UNKNOWN\n\n"
+                f"Text:\n{head}"
+            )
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {"temperature": 0.0, "response_mime_type": "text/plain"}
+            }
+            try:
+                import urllib.request as _ureq, time as _time
+                for attempt in range(3):
+                    try:
+                        req = _ureq.Request(
+                            url,
+                            data=json.dumps(payload).encode('utf-8'),
+                            headers={'Content-Type': 'application/json'}
+                        )
+                        with _ureq.urlopen(req) as resp:
+                            result = json.loads(resp.read().decode('utf-8'))
+                            name = result['candidates'][0]['content']['parts'][0]['text'].strip()
+                            if name and name != "UNKNOWN" and len(name) < 100:
+                                name = _re.sub(r'\s+', ' ', name)
+                                return name.title()
+                            return fallback
+                    except urllib.error.HTTPError as e:
+                        if e.code == 429 and attempt < 2:
+                            _time.sleep(2 ** attempt)
+                            continue
+                        raise
+            except Exception as e:
+                print(f"[COMPANY NAME] LLM fallback failed: {e}")
+
+            return fallback
+
+        # 4. Process each bidder
+        for idx, bidder_file in enumerate(bidders):
+            raw_filename_name = clean_bidder_name(bidder_file.filename)
             
             vendor_id = vendor_ids_parsed[idx] if idx < len(vendor_ids_parsed) and vendor_ids_parsed[idx].strip() else None
             
@@ -129,9 +229,8 @@ async def analyze(
                 else raw_filename_name
             )
             
-            # Idempotency guard: if vendor_id is omitted, fallback to the stable derived name
-            # instead of generating a random UUID so that re-uploads don't break frontend state tracking
-            bid_id_value = f"BID-{vendor_id}" if vendor_id else f"BID-{raw_filename_name}"
+            # Idempotency guard
+            bid_id_value = f"BID-{vendor_id}" if vendor_id else f"BID-{raw_filename_name.upper().replace(' ', '_')}"
             
             bidder_path = os.path.join(tmpdir, f"bidder_{idx}.pdf")
 
@@ -140,7 +239,6 @@ async def analyze(
                 
             bidder_sanity = check_document_sanity(bidder_path)
             if not bidder_sanity["ok"]:
-                # Don't abort the whole batch — create a stub report flagging this bidder
                 stub_report = {
                     "bid_id": bid_id_value,
                     "bidder_name": bidder_display_name,
@@ -157,10 +255,14 @@ async def analyze(
                     "document_error_code": bidder_sanity["error_code"],
                 }
                 reports.append(stub_report)
-                continue  # skip to next bidder
+                continue
 
             # Claim extraction
             raw_text, claims, is_scanned = extract_bidder_claims(bidder_path)
+            
+            # Extract actual company name if available
+            bidder_display_name = extract_company_name(raw_text, bidder_display_name)
+            
             tech_spec_claims, tech_spec_reqs = extract_tech_spec_table(bidder_path)
             claims.update(tech_spec_claims)
 
