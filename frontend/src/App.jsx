@@ -124,7 +124,7 @@ export default function App() {
       </header>
 
       {/* Global Sidebar */}
-      <aside className="fixed left-0 top-16 bottom-0 w-64 bg-surface-container-low z-40 flex flex-col justify-between py-space-md border-r border-outline-variant">
+      <aside className="fixed left-0 top-16 bottom-10 w-64 bg-surface-container-low z-40 flex flex-col justify-between py-space-md border-r border-outline-variant">
         <div className="flex flex-col">
           <div className="px-space-md pb-space-sm border-b border-outline-variant mb-space-xs">
             <div className="font-label-caps text-label-caps text-on-surface-variant uppercase">Verification Rail</div>
@@ -150,8 +150,8 @@ export default function App() {
       </aside>
 
       {/* Main Content Area */}
-      <div className="pl-64">
-        <main className="relative pt-16 w-full bg-background min-h-screen flex flex-col">
+      <div className="pl-64 pb-10">
+        <main className="relative pt-16 w-full bg-background min-h-[calc(100vh-2.5rem)] flex flex-col">
           <div className="flex-1">
             {view === 'upload' ? (
               <UploadDashboard onComplete={handleAnalysisComplete} />
@@ -159,22 +159,20 @@ export default function App() {
               <ResultsDashboard reports={reports} />
             )}
           </div>
-          
-          {/* Global Footer */}
-          <footer className="w-full mt-auto bg-surface-container-low/30 border-t border-outline-variant/30 py-space-md px-gutter">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-on-surface-variant font-mono-data-sm text-[11px] opacity-70">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[14px]">shield</span>
-                <span>VECTA GeM Enclave • Secure Technical Evaluation Workspace</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <span>v1.0.0 (AI Bid Intelligence Engine)</span>
-                <span>&copy; {new Date().getFullYear()} Government of India</span>
-              </div>
-            </div>
-          </footer>
         </main>
       </div>
+
+      {/* Global Footer */}
+      <footer className="fixed bottom-0 left-0 right-0 h-10 z-50 bg-primary border-t border-amber-900/30 px-gutter flex items-center justify-between text-amber-200/70 font-mono-data-sm text-[11px]">
+        <div className="flex items-center gap-2">
+          <span className="material-symbols-outlined text-[14px]">shield</span>
+          <span>VECTA GeM Enclave • Secure Technical Evaluation Workspace</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <span>v1.0.0 (AI Bid Intelligence Engine)</span>
+          <span>&copy; {new Date().getFullYear()} Government of India</span>
+        </div>
+      </footer>
     </div>
   );
 }
