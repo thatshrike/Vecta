@@ -170,7 +170,6 @@ export default function App() {
       {/* Global Footer */}
       <footer className="fixed bottom-0 left-0 right-0 h-10 z-50 bg-primary border-t border-primary-container px-gutter flex items-center justify-between text-on-primary/70 font-mono-data-sm text-[11px]">
         <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-[14px]">bolt</span>
           <span>&copy; {new Date().getFullYear()} CogBoys</span>
         </div>
         <div className="flex items-center gap-4">
