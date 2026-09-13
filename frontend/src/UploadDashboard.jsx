@@ -149,8 +149,6 @@ export default function UploadDashboard({ onComplete }) {
 
   const canRun = tenderFile && bidderFiles.length > 0;
 
-  const canRun = tenderFile && bidderFiles.length > 0;
-
   return (
     <div className="flex flex-col w-full p-4 lg:p-8">
       {/* Sub-Header / Tender Workflow Step Indicator */}
