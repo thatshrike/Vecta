@@ -16,6 +16,7 @@ export default function App() {
   const [view, setView] = useState('upload'); // 'upload' | 'results'
   const [reports, setReports] = useState([]);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // Keep sessionStorage in sync whenever user changes
   useEffect(() => {
@@ -56,6 +57,13 @@ export default function App() {
         <div className="h-16 w-full">
           <div className="h-16 px-gutter flex items-center justify-between w-full">
             <div className="flex items-center gap-space-lg">
+              <button 
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className="hover:bg-on-primary/10 p-1.5 rounded transition-colors flex items-center justify-center focus:outline-none"
+                title="Toggle Sidebar"
+              >
+                <span className="material-symbols-outlined text-on-primary text-[24px]">menu</span>
+              </button>
               <div className="flex items-center gap-space-sm">
                 <div className="w-8 h-8 rounded-md flex items-center justify-center overflow-hidden">
                   <img src="/favicon.svg" alt="Vecta Logo" className="w-full h-full object-cover" />
@@ -125,12 +133,9 @@ export default function App() {
       </header>
 
       {/* Global Sidebar */}
-      <aside className="fixed left-0 top-16 bottom-10 w-64 bg-surface-container-lowest z-40 flex flex-col justify-between py-space-md border-r border-outline-variant">
+      <aside className={`fixed left-0 top-16 bottom-10 w-64 bg-surface-container-low z-40 flex flex-col justify-between py-space-md border-r border-outline-variant transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex flex-col">
-          <div className="px-space-md pb-space-sm border-b border-outline-variant mb-space-xs">
-            <div className="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest">Navigation</div>
-          </div>
-          <nav className="flex flex-col gap-1 px-space-xs">
+          <nav className="flex flex-col gap-1 px-space-xs mt-2">
             <a
               aria-current={view === 'upload' ? 'page' : undefined}
               onClick={(e) => { e.preventDefault(); setView('upload'); }}
@@ -150,7 +155,7 @@ export default function App() {
       </aside>
 
       {/* Main Content Area */}
-      <div className="pl-64 pb-10">
+      <div className={`pb-10 transition-all duration-300 ${isSidebarOpen ? 'pl-64' : 'pl-0'}`}>
         <main className="relative pt-16 w-full bg-background min-h-[calc(100vh-2.5rem)] flex flex-col">
           <div className="flex-1">
             {view === 'upload' ? (
