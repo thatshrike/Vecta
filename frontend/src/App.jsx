@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import UploadDashboard from './UploadDashboard';
-import ResultsDashboard from './ResultsDashboard'; // We'll create this to consolidate results
+import ResultsDashboard from './ResultsDashboard';
+import LoginDashboard from './LoginDashboard';
 
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [view, setView] = useState('upload'); // 'upload' | 'results'
   const [reports, setReports] = useState([]);
 
@@ -10,6 +12,10 @@ export default function App() {
     setReports(newReports);
     setView('results');
   };
+
+  if (!isAuthenticated) {
+    return <LoginDashboard onLogin={() => setIsAuthenticated(true)} />;
+  }
 
   return (
     <div className="bg-background font-body-md text-on-surface min-h-screen">
@@ -33,8 +39,8 @@ export default function App() {
           <div className="h-16 px-gutter flex items-center justify-between bg-primary-container">
             <div className="flex items-center gap-space-lg">
               <div className="flex items-center gap-space-sm">
-                <div className="w-9 h-9 rounded bg-amber-500 flex items-center justify-center shadow-inner">
-                  <span className="font-headline-sm text-headline-sm font-bold text-stone-950">GeM</span>
+                <div className="w-10 h-10 flex items-center justify-center">
+                  <img src="/logo.svg" alt="Vecta Platform Logo" className="w-full h-full drop-shadow-md" />
                 </div>
                 <div>
                   <div className="font-headline-sm text-headline-sm text-on-primary font-bold tracking-tight">AI Bid Intelligence & Technical Evaluation</div>
