@@ -60,7 +60,7 @@ export default function IndividualBidderView({ report, onOverride }) {
 
   return (
     <div className="flex flex-col gap-space-lg w-full pb-space-xl px-gutter">
-      
+
       {/* Sticky Bidder Header */}
       <div className="sticky top-0 z-10 bg-surface-container-lowest border border-outline-variant shadow-sm px-space-lg py-space-md rounded-b flex flex-col md:flex-row md:items-center justify-between gap-space-md">
         <div className="flex flex-col gap-1">
@@ -87,7 +87,7 @@ export default function IndividualBidderView({ report, onOverride }) {
               )}
             </div>
           )}
-          
+
           <div className={`px-space-md py-1.5 rounded font-label-caps text-label-caps font-bold border ${report.risk_level === 'High' ? 'bg-error-container text-on-error-container border-error/30' : report.risk_level === 'Medium' ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-emerald-100 text-emerald-800 border-emerald-300'}`}>
             {report.risk_level === 'High' ? (
               <div className="flex items-center gap-1"><span className="material-symbols-outlined text-[16px]">gpp_bad</span> HIGH RISK</div>
@@ -134,7 +134,7 @@ export default function IndividualBidderView({ report, onOverride }) {
 
       {/* 3-Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-md items-start">
-        
+
         {/* Left Column: Summary & Queue */}
         <div className="lg:col-span-3 flex flex-col gap-space-md">
           <div className="grid grid-cols-3 gap-2">
@@ -362,7 +362,7 @@ export default function IndividualBidderView({ report, onOverride }) {
               <div className="bg-surface-container-lowest border border-outline-variant rounded flex flex-col mt-2 overflow-hidden">
                 <div className="bg-surface-container-low px-space-md py-2 border-b border-outline-variant">
                   <span className="font-label-caps text-[11px] font-bold text-primary uppercase block">Officer Decision</span>
-                  <span className="text-[10px] text-on-surface-variant">Human retains final authority. This decision is logged for audit.</span>
+                  <span className="text-[10px] text-on-surface-variant">This decision is logged for audit.</span>
                 </div>
                 <div className="p-space-md flex flex-col gap-space-md">
                   <textarea
