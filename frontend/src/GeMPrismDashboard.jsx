@@ -183,13 +183,11 @@ export default function GeMPrismDashboard() {
             if (item.verdict === 'COMPLIANT') status = 'VERIFIED';
             else if (item.verdict === 'NON_COMPLIANT') status = 'MISMATCH';
 
-            const paramName = PARAMETER_NAMES[item.requirement_id] || item.requirement_id;
+            const paramName = item.parameter || PARAMETER_NAMES[item.requirement_id] || item.requirement_id;
             
             let reqText = 'As per Tender Specification';
             if (item.evidence && item.evidence.tender) {
               reqText = typeof item.evidence.tender === 'object' ? item.evidence.tender.text : item.evidence.tender;
-            } else if (item.reason && item.reason.includes('Required')) {
-              reqText = item.reason;
             }
 
             let proofText = 'No explicit declaration found in bidder PDF';
@@ -201,10 +199,10 @@ export default function GeMPrismDashboard() {
 
             const docLocation = item.evidence?.tender?.page 
               ? `Tender Doc Page ${item.evidence.tender.page}` 
-              : `Evaluation Rule ${item.requirement_id}`;
+              : (item.evidence?.bidder?.page ? `Bidder Document Page ${item.evidence.bidder.page}` : `Evaluation Parameter`);
 
             return {
-              id: item.requirement_id,
+              id: item.requirement_id || `PARAM-${idx+1}`,
               parameter: paramName,
               requirement: reqText,
               proof: proofText,
@@ -364,7 +362,7 @@ export default function GeMPrismDashboard() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen w-screen bg-[#edf2f7] font-sans text-slate-800 antialiased select-none">
+    <div className="flex flex-col min-h-screen w-full overflow-x-hidden bg-[#edf2f7] font-sans text-slate-800 antialiased select-none">
       
       {/* 1. TOP NAV BAR */}
       <header className="bg-[#091b36] border-b border-[#051124] text-white px-5 py-3 flex items-center justify-between shadow-md">
@@ -838,17 +836,17 @@ export default function GeMPrismDashboard() {
                           }`}
                           title="Click to select this clause for officer acceptance / rejection"
                         >
-                          <td className="py-3.5 px-4 font-semibold text-slate-800">
+                          <td className="py-3.5 px-4 font-semibold text-slate-800 break-words">
                             {row.parameter}
                           </td>
 
-                          <td className="py-3.5 px-4 text-slate-600 font-medium">
+                          <td className="py-3.5 px-4 text-slate-600 font-medium break-words leading-relaxed text-xs">
                             {row.requirement}
                           </td>
 
-                          <td className="py-3.5 px-4">
+                          <td className="py-3.5 px-4 break-words">
                             <div className="flex flex-col gap-0.5">
-                              <span className="font-semibold text-slate-800">
+                              <span className="font-semibold text-slate-800 break-words leading-relaxed text-xs">
                                 {row.proof}
                               </span>
                               <button
