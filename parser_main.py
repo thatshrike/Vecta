@@ -6,6 +6,8 @@ import os
 import urllib.request
 import urllib.parse
 
+SEMANTIC_CONFIDENCE_THRESHOLD = 0.7
+
 def call_llm(requirement_summary, bidder_text):
     prompt = f"""You are extracting a compliance judgment from a bidder's document. You are
 NOT making a final decision — you are reporting what the evidence shows.
@@ -297,7 +299,7 @@ def evaluate(claim, req):
             llm_reasoning = claim["reasoning"]
             llm_confidence = claim["confidence"]
 
-            if llm_confidence < 0.7:
+            if llm_confidence < SEMANTIC_CONFIDENCE_THRESHOLD:
                 return {
                     "requirement_id": req["id"],
                     "verdict": "INCONCLUSIVE",
@@ -466,33 +468,58 @@ def compute_compliance_score(line_items: list) -> dict:
     weighted_sum = 0
     mandatory_hard_fail = False
     failed_mandatory_ids = []
+    
+    total_items = len(line_items)
+    evaluated_items = 0
 
     for item in line_items:
         req_id = item["requirement_id"]
         crit = get_criticality(req_id)
         weight = MANDATORY_WEIGHT if crit == "mandatory" else SCORED_WEIGHT
-        coeff = STATUS_COEFFICIENT.get(item["verdict"], 0.0)
-
-        total_weight += weight
-        weighted_sum += weight * coeff
+        
+        # INCONCLUSIVE items are excluded from the score denominator
+        if item["verdict"] == "COMPLIANT":
+            total_weight += weight
+            weighted_sum += weight
+            evaluated_items += 1
+        elif item["verdict"] == "NON_COMPLIANT":
+            total_weight += weight
+            evaluated_items += 1
 
         if crit == "mandatory" and item["verdict"] == "NON_COMPLIANT":
             mandatory_hard_fail = True
             failed_mandatory_ids.append(req_id)
 
-    score = (weighted_sum / total_weight * 100) if total_weight > 0 else 0
-
-    if mandatory_hard_fail:
-        risk_level = "High"
-    elif score >= 85:
-        risk_level = "Low"
-    elif score >= 60:
-        risk_level = "Medium"
+    # Coverage and resolved pass rate
+    coverage = (evaluated_items / total_items) if total_items > 0 else 0.0
+    
+    if total_weight > 0:
+        score = (weighted_sum / total_weight) * 100
+        resolved_pass_rate = score
     else:
-        risk_level = "High"
+        score = 0.0
+        resolved_pass_rate = 0.0
+
+    # Gate the headline score behind 70% coverage floor
+    if coverage >= 0.70 and total_weight > 0:
+        compliance_score_display = round(score, 1)
+        if mandatory_hard_fail:
+            risk_level = "High"
+        elif score >= 85:
+            risk_level = "Low"
+        elif score >= 60:
+            risk_level = "Medium"
+        else:
+            risk_level = "High"
+    else:
+        compliance_score_display = "N/A"
+        risk_level = "High" if mandatory_hard_fail else "Medium" # Default risk if N/A
 
     return {
-        "compliance_score": round(score, 1),
+        "compliance_score": compliance_score_display,
+        "coverage": round(coverage, 2),
+        "resolved_pass_rate": round(resolved_pass_rate, 1),
+        "pending_review_count": total_items - evaluated_items,
         "risk_level": risk_level,
         "mandatory_hard_fail": mandatory_hard_fail,
         "failed_mandatory_requirements": failed_mandatory_ids
@@ -523,6 +550,8 @@ def aggregate_bid_verdicts(bid_id, bidder_name, verdicts):
             item["requires_human_review"] = True
         if verdict.get("evidence"):
             item["evidence"] = verdict["evidence"]
+        if verdict.get("ai_verdict"):
+            item["ai_verdict"] = verdict["ai_verdict"]
             
         line_items.append(item)
         

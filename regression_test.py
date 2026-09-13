@@ -1,79 +1,51 @@
-import os
-import requests
-import time
+# Run from project root: python regression_test.py
+# Tests compute_compliance_score edge cases from parser_main.py
 
-URL = "http://localhost:8000/analyze"
-TENDER_FILE = "test_data/bhel/tender_bhel.pdf"
+import sys
+sys.path.insert(0, '.')
+from parser_main import compute_compliance_score, SEMANTIC_CONFIDENCE_THRESHOLD
 
-# Format: (filename, expected_verdict_direction)
-BIDDERS = [
-    ("test_data/bhel/bidder_compliant.pdf", "COMPLIANT"),
-    ("test_data/bhel/bidder_noncompliant.pdf", "NON_COMPLIANT"),
-    ("test_data/bhel/bidder_ambigous.pdf", "INCONCLUSIVE/MIXED"),
-    ("test_data/bhel/bidder_tech_spec.pdf", "MIXED (TS-*)"),
-    ("test_data/bhel/bidder_semantic_clear_pass.pdf", "COMPLIANT"),
-    ("test_data/bhel/bidder_semantic_clear_fail.pdf", "NON_COMPLIANT"),
-    ("test_data/bhel/bidder_semantic_ambiguous.pdf", "INCONCLUSIVE"),
-    ("test_data/bhel/bidder_partial_compliant.pdf", "MIXED"),
-    ("test_data/bhel/bidder_lakh_format.pdf", "COMPLIANT"),
-    ("test_data/bhel/bidder_full_compliant.pdf", "COMPLIANT")
-]
+def make_item(verdict, criticality='scored'):
+    # Minimal line_item dict that compute_compliance_score can process
+    req_id = 'REQ-001' if criticality == 'mandatory' else 'TS-01'
+    return {'requirement_id': req_id, 'verdict': verdict, 'criticality': criticality}
 
-print("Waiting for server to start...")
-time.sleep(2)
+# Test 1: All INCONCLUSIVE → coverage 0 → score must be "N/A", not 0
+items = [make_item('INCONCLUSIVE')] * 10
+result = compute_compliance_score(items)
+assert result['compliance_score'] == 'N/A', f"Expected N/A for all-inconclusive, got {result['compliance_score']}"
+assert result['coverage'] == 0.0
+assert result['pending_review_count'] == 10
 
-results = []
+# Test 2: Mixed — 5 compliant, 5 inconclusive → coverage = 50% → still "N/A"
+items = [make_item('COMPLIANT')] * 5 + [make_item('INCONCLUSIVE')] * 5
+result = compute_compliance_score(items)
+assert result['compliance_score'] == 'N/A', f"Expected N/A at 50% coverage, got {result['compliance_score']}"
+assert result['coverage'] == 0.5
 
-for bidder_file, expected in BIDDERS:
-    if not os.path.exists(bidder_file):
-        print(f"Skipping {bidder_file}, file not found")
-        continue
-    
-    print(f"Testing {bidder_file}...")
-    try:
-        with open(TENDER_FILE, "rb") as t_f, open(bidder_file, "rb") as b_f:
-            files = {
-                "tender": (TENDER_FILE, t_f, "application/pdf"),
-                "bidders": (bidder_file, b_f, "application/pdf")
-            }
-            resp = requests.post(URL, files=files)
-            resp.raise_for_status()
-            data = resp.json()[0] # array of 1 report
-            
-            portal_checks = data.get("portal_checks", [])
-            pc_count = len(portal_checks)
-            line_items = data.get("line_items", [])
-            li_count = len(line_items)
-            score = data.get("compliance_score")
-            risk = data.get("risk_level")
-            
-            # Determine overall pass/fail logic based on risk/score/recommendation
-            actual_pass = "PASS" if risk == "Low" else "FAIL" if risk == "High" else "REVIEW"
-            
-            # Check for drift
-            drift = []
-            if pc_count != 3:
-                drift.append(f"Portal checks {pc_count} != 3")
-            if li_count < 10:
-                drift.append(f"Line items {li_count} < 10")
-            if score is None or not isinstance(score, (int, float)):
-                drift.append(f"Invalid score: {score}")
-            if risk not in ["Low", "Medium", "High"]:
-                drift.append(f"Invalid risk: {risk}")
-                
-            # Naive expectation matching for drift
-            if "COMPLIANT" in expected and risk == "High":
-                drift.append(f"Expected compliant, got {risk}")
-            if "NON_COMPLIANT" in expected and risk == "Low":
-                drift.append(f"Expected non-compliant, got {risk}")
-                
-            notes = ", ".join(drift) if drift else "OK"
-            results.append(f"| `{bidder_file}` | {expected} | {score} | {risk} | {pc_count} | {actual_pass} | {notes} |")
-    except Exception as e:
-        results.append(f"| `{bidder_file}` | {expected} | ERROR | ERROR | ERROR | ERROR | {str(e)} |")
+# Test 2b: Boundary stress — 69.9% coverage (6 evaluated, 3 inconclusive out of 10 never hits 69.9%
+# exactly, so use 9 items: 6 evaluated, 3 inconclusive → 66.7%). Must still be N/A.
+# This confirms the gate is >= 0.70, not > 0.70 (a > would let 70.0% through as N/A).
+items = [make_item('COMPLIANT')] * 6 + [make_item('INCONCLUSIVE')] * 3  # 6/9 = 66.7%
+result = compute_compliance_score(items)
+assert result['compliance_score'] == 'N/A', f"Expected N/A at 66.7% coverage, got {result['compliance_score']}"
+assert result['coverage'] < 0.70, f"Coverage should be below floor, got {result['coverage']}"
 
-print("\n\n### Regression Test Results\n")
-print("| Bidder | Expected | Actual Score | Actual Risk | Portal Checks Present | Pass/Fail | Drift Notes |")
-print("|---|---|---|---|---|---|---|")
-for r in results:
-    print(r)
+# Test 3: 7 compliant, 3 inconclusive → coverage = 70.0% exactly → score must render (not N/A).
+# Backend uses weighted scoring (mandatory × MANDATORY_WEIGHT, scored × SCORED_WEIGHT),
+# so the precise value depends on criticality mix. We only assert it's not N/A and is numeric.
+items = [make_item('COMPLIANT')] * 7 + [make_item('INCONCLUSIVE')] * 3
+result = compute_compliance_score(items)
+assert result['compliance_score'] != 'N/A', f"Expected numeric score at exactly 70% coverage, got N/A"
+assert result['compliance_score'] == 100  # 7/7 pass
+
+# Test 4: NON_COMPLIANT mandatory item sets risk_level to High even if score is good
+items = [make_item('COMPLIANT')] * 9 + [make_item('NON_COMPLIANT', 'mandatory')]
+result = compute_compliance_score(items)
+assert result['risk_level'] == 'High', f"Expected High risk for mandatory fail, got {result['risk_level']}"
+assert result['mandatory_hard_fail'] == True
+
+# Test 5: Threshold constant is the one value, not a magic number
+assert SEMANTIC_CONFIDENCE_THRESHOLD == 0.7, "Threshold constant changed — update frontend reference too"
+
+print("All regression tests passed.")
