@@ -1,6 +1,50 @@
 import React, { useState, useEffect } from 'react';
 import IndividualBidderView from './IndividualBidderView';
 
+// Serialize localReports into a flat CSV and trigger a browser download
+function generateCSV(localReports) {
+  const escCell = (v) => {
+    const s = String(v ?? '').replace(/"/g, '""');
+    return s.includes(',') || s.includes('\n') || s.includes('"') ? `"${s}"` : s;
+  };
+
+  const headers = [
+    'Clause ID', 'Criticality', 'Bidder Name', 'Bid ID',
+    'Verdict', 'Reason', 'Review Reason', 'Requires Human Review'
+  ];
+
+  const rows = [];
+  const allClauses = localReports[0]?.line_items?.map(i => i.requirement_id) ?? [];
+
+  for (const clauseId of allClauses) {
+    for (const report of localReports) {
+      const item = report.line_items?.find(i => i.requirement_id === clauseId);
+      rows.push([
+        clauseId,
+        item?.criticality ?? '',
+        report.bidder_name,
+        report.bid_id,
+        item?.verdict ?? 'NOT_EVALUATED',
+        item?.reason ?? '',
+        item?.review_reason ?? '',
+        item?.requires_human_review ? 'Yes' : 'No',
+      ]);
+    }
+  }
+
+  const csvContent = [headers, ...rows]
+    .map(row => row.map(escCell).join(','))
+    .join('\n');
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `vecta_evaluation_matrix_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function ResultsDashboard({ reports }) {
   const [localReports, setLocalReports] = useState(reports);
   const [activeTab, setActiveTab] = useState('overview');
@@ -245,7 +289,9 @@ export default function ResultsDashboard({ reports }) {
                   <h2 className="font-headline-sm text-headline-sm font-bold text-primary">Statutory & Technical Clause Evaluation Matrix</h2>
                   <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">Side-by-side comparison of all evaluated clauses across bidders.</p>
                 </div>
-                <button className="px-space-md py-1.5 bg-primary text-on-primary rounded font-body-sm font-semibold hover:bg-stone-800 transition-colors flex items-center gap-1 shadow-sm">
+                <button 
+                  onClick={() => generateCSV(localReports)}
+                  className="px-space-md py-1.5 bg-primary text-on-primary rounded font-body-sm font-semibold hover:bg-stone-800 transition-colors flex items-center gap-1 shadow-sm">
                   <span className="material-symbols-outlined text-[16px]">download</span> Export Matrix (CSV)
                 </button>
               </div>

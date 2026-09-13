@@ -5,6 +5,10 @@ import sys
 import os
 import urllib.request
 import urllib.parse
+from dotenv import load_dotenv
+
+# Load environment variables from .env (keeps secrets out of source control)
+load_dotenv()
 
 SEMANTIC_CONFIDENCE_THRESHOLD = 0.7
 
@@ -31,7 +35,7 @@ completed."
 """
     api_key = os.environ.get("GEMINI_API_KEY")
     if api_key:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
         data = {
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {"temperature": 0.0, "response_mime_type": "application/json"}
