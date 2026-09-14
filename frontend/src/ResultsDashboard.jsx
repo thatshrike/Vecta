@@ -82,7 +82,8 @@ export default function ResultsDashboard({ reports }) {
     if (!targetReport) return;
 
     try {
-      const res = await fetch('http://localhost:8000/recalculate', {
+      const API_URL = import.meta.env.VITE_API_URL || 'https://vecta-hzhn.onrender.com';
+      const res = await fetch(`${API_URL}/recalculate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
