@@ -83,7 +83,9 @@ export default function ResultsDashboard({ reports }) {
 
     try {
       const API_URL = import.meta.env.VITE_API_URL || 'https://vecta-hzhn.onrender.com';
-      const res = await fetch(`${API_URL}/recalculate`, {
+      const LOCAL_URL = 'http://localhost:8000';
+      
+      const requestOptions = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -95,7 +97,19 @@ export default function ResultsDashboard({ reports }) {
             reason: reason || 'Officer accepted finding.'
           }
         }),
-      });
+      };
+
+      let res;
+      try {
+        res = await fetch(`${API_URL}/recalculate`, requestOptions);
+        if (!res.ok) {
+          throw new Error(`Online backend failed with status ${res.status}`);
+        }
+      } catch (err) {
+        console.warn('Online backend failed, falling back to local python backend:', err);
+        res = await fetch(`${LOCAL_URL}/recalculate`, requestOptions);
+      }
+
       if (!res.ok) return; // leave optimistic UI in place on error; don't corrupt state
       const scoreUpdate = await res.json();
       setLocalReports(prev => prev.map(report => {

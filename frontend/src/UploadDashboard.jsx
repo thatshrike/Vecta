@@ -112,10 +112,25 @@ export default function UploadDashboard({ onComplete }) {
       }
 
       const API_URL = import.meta.env.VITE_API_URL || 'https://vecta-hzhn.onrender.com';
-      const response = await fetch(`${API_URL}/analyze`, {
-        method: 'POST',
-        body: formData,
-      });
+      const LOCAL_URL = 'http://localhost:8000';
+      let response;
+      
+      try {
+        response = await fetch(`${API_URL}/analyze`, {
+          method: 'POST',
+          body: formData,
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Online backend failed with status ${response.status}`);
+        }
+      } catch (err) {
+        console.warn('Online backend failed, falling back to local python backend:', err);
+        response = await fetch(`${LOCAL_URL}/analyze`, {
+          method: 'POST',
+          body: formData,
+        });
+      }
 
       if (!response.ok) {
         const errText = await response.text();
