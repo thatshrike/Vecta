@@ -69,19 +69,14 @@ def check_document_sanity(pdf_path: str) -> dict:
 SEMANTIC_CONFIDENCE_THRESHOLD = 0.7
 
 def call_llm(requirement_summary, bidder_text):
-    prompt = f"""You are extracting a compliance judgment from a bidder's document. You are
-NOT making a final decision — you are reporting what the evidence shows.
-
+    prompt = f"""
+You are an expert compliance evaluator. Compare the tender requirement against the bidder's statement.
 Tender requirement: {requirement_summary}
 
 Bidder's statement: {bidder_text}
 
-Respond ONLY in this exact JSON shape, nothing else:
-{{
-  "judgment": "SATISFIES" | "DOES_NOT_SATISFY" | "UNCLEAR",
-  "reasoning": "<one sentence explaining what evidence led to this judgment>",
-  "confidence": <float 0.0-1.0, your own confidence in this judgment>
-}}
+Respond ONLY in this exact JSON shape, nothing else.
+If the text contains page markers like '--- Page 1 ---', use that to determine the page number of the snippet.
 
 If the bidder's statement doesn't give you enough concrete, specific evidence
 (exact quantities, specific govt/PSU entity named, specific year) to confirm
@@ -94,7 +89,34 @@ completed."
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
         data = {
             "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {"temperature": 0.0, "response_mime_type": "application/json"}
+            "generationConfig": {
+                "temperature": 0.0,
+                "response_mime_type": "application/json",
+                "response_schema": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "judgment": {
+                            "type": "STRING",
+                            "enum": ["SATISFIES", "DOES_NOT_SATISFY", "UNCLEAR"]
+                        },
+                        "reasoning": {
+                            "type": "STRING"
+                        },
+                        "confidence": {
+                            "type": "NUMBER"
+                        },
+                        "page_number": {
+                            "type": "INTEGER",
+                            "nullable": True
+                        },
+                        "snippet": {
+                            "type": "STRING",
+                            "nullable": True
+                        }
+                    },
+                    "required": ["judgment", "reasoning", "confidence"]
+                }
+            }
         }
         try:
             import time
@@ -105,10 +127,6 @@ completed."
                         result = json.loads(response.read().decode('utf-8'))
                         text_response = result['candidates'][0]['content']['parts'][0]['text']
                         print(f"\n[LLM RAW RESPONSE]\n{text_response.strip()}\n[/LLM RAW RESPONSE]")
-                        
-                        json_match = re.search(r"\{.*\}", text_response.strip(), re.DOTALL)
-                        if json_match:
-                            return json.loads(json_match.group(0))
                         return json.loads(text_response.strip())
                 except urllib.error.HTTPError as e:
                     if e.code == 429 and attempt < 2:
@@ -167,28 +185,20 @@ def call_llm_extraction(pdf_path: str, field_description: str, bidder_text: str,
         with open(cache_file, 'r', encoding='utf-8') as f:
             return json.load(f)
 
-    prompt = f"""You are extracting a specific data field from a bidder's tender document.
-Do NOT make compliance judgments — only extract what the text literally states.
-
+    prompt = f"""
+You are extracting specific data from a bidder's document for compliance verification.
 Field to extract: {field_description}
 
 Bidder document text:
 {bidder_text}
 
-Respond ONLY in this exact JSON shape, nothing else:
-{{
-  "found": true | false | null,
-  "value": <numeric value as float, or null if not applicable or not found>,
-  "present": <true if document/certificate explicitly mentioned as attached/enclosed/provided, false if explicitly absent, null if ambiguous>,
-  "confidence": <float 0.0-1.0, your confidence in the extraction>,
-  "reasoning": "<one sentence explaining what you found or didn't find>"
-}}
+Respond ONLY in this exact JSON shape, nothing else.
+If the text contains page markers like '--- Page 1 ---', use that to determine the page number of the snippet.
 
 If the text contains vague language like 'relevant documents attached' without naming the specific document, set found=false and confidence below 0.5.
 Only set found=true if you can point to specific, unambiguous evidence.
 
 IMPORTANT FOR TABLES: If the text contains a table (e.g. with a 'Status' column), accept affirmative answers like 'Yes', 'Submitted', or 'Enclosed' in the Status column as confirmation of presence.
-However, a value of 'No' or 'Partial' in the Status column must be treated as NOT confirmed present (set found=null or false for Partial/No) — only an explicit affirmative Status value counts as presence. Do not infer presence from surrounding requirement-description text.
 """
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
@@ -197,7 +207,23 @@ However, a value of 'No' or 'Partial' in the Status column must be treated as NO
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
     data = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": 0.0, "response_mime_type": "application/json"}
+        "generationConfig": {
+            "temperature": 0.0,
+            "response_mime_type": "application/json",
+            "response_schema": {
+                "type": "OBJECT",
+                "properties": {
+                    "found": { "type": "BOOLEAN", "nullable": True },
+                    "value": { "type": "NUMBER", "nullable": True },
+                    "present": { "type": "BOOLEAN", "nullable": True },
+                    "confidence": { "type": "NUMBER" },
+                    "reasoning": { "type": "STRING" },
+                    "page_number": { "type": "INTEGER", "nullable": True },
+                    "snippet": { "type": "STRING", "nullable": True }
+                },
+                "required": ["found", "value", "present", "confidence", "reasoning"]
+            }
+        }
     }
     for attempt in range(3):
         try:
@@ -262,7 +288,17 @@ def call_llm_ocr_page(pdf_path, page_num):
                     {"inline_data": {"mime_type": "image/png", "data": img_b64}}
                 ]
             }],
-            "generationConfig": {"temperature": 0.0}
+            "generationConfig": {
+                "temperature": 0.0,
+                "response_mime_type": "application/json",
+                "response_schema": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "extracted_text": { "type": "STRING" }
+                    },
+                    "required": ["extracted_text"]
+                }
+            }
         }
         import time
         for attempt in range(3):
@@ -275,9 +311,11 @@ def call_llm_ocr_page(pdf_path, page_num):
                 with urllib.request.urlopen(req, timeout=30) as response:
                     result = json.loads(response.read().decode('utf-8'))
                     text_response = result['candidates'][0]['content']['parts'][0]['text']
+                    parsed = json.loads(text_response)
+                    extracted_text = parsed.get("extracted_text", "")
                     with open(cache_file, 'w', encoding='utf-8') as f:
-                        f.write(text_response)
-                    return text_response
+                        f.write(extracted_text)
+                    return extracted_text
             except urllib.error.HTTPError as e:
                 if e.code == 429 and attempt < 2:
                     print(f"[OCR] Rate limit hit, sleeping 15 seconds...")
@@ -764,7 +802,7 @@ def extract_bidder_claims(pdf_path):
                             "method": "llm_fallback",
                             "llm_confidence": result["confidence"],
                             "llm_reasoning": result["reasoning"],
-                            "evidence": {"document": pdf_path, "page": 0, "text": result["reasoning"]}
+                            "evidence": {"document": pdf_path, "page": result.get("page_number"), "text": result.get("snippet") or result.get("reasoning", "no matching text found")}
                         }
                     elif spec["type"] == "DOCUMENT_PRESENT":
                         # Accept present=True or present=False from LLM; both are
@@ -776,7 +814,7 @@ def extract_bidder_claims(pdf_path):
                                 "method": "llm_fallback",
                                 "llm_confidence": result["confidence"],
                                 "llm_reasoning": result["reasoning"],
-                                "evidence": {"document": pdf_path, "page": 0, "text": result["reasoning"]}
+                                "evidence": {"document": pdf_path, "page": result.get("page_number"), "text": result.get("snippet") or result.get("reasoning", "no matching text found")}
                             }
                     print(f"[LLM FALLBACK] {req_id}: extracted with confidence {result['confidence']:.2f}")
                 elif result:

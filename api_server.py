@@ -437,10 +437,18 @@ async def analyze(
                         bidder_evidence["llm_judgment"] = claim["judgment"]
                         bidder_evidence["llm_confidence"] = claim["confidence"]
                         bidder_evidence["llm_reasoning"] = claim.get("reasoning", "")
+                        if "page_number" in claim and claim["page_number"] is not None:
+                            bidder_evidence["page"] = claim["page_number"]
+                        if "snippet" in claim and claim["snippet"] is not None:
+                            bidder_evidence["text"] = claim["snippet"]
+                        elif claim.get("reasoning"):
+                            bidder_evidence["text"] = claim["reasoning"]
                         bidder_evidence["confidence_threshold"] = SEMANTIC_CONFIDENCE_THRESHOLD
 
                     if bidder_evidence:
                         item["evidence"] = {"bidder": bidder_evidence}
+                else:
+                    item["evidence"] = {"bidder": {"text": "no matching text found", "page": None}}
 
                 # Also attach tender-side evidence from the requirement
                 if req_obj and req_obj.get("evidence"):
