@@ -1,0 +1,5 @@
+fastapi[standard]
+pydantic
+pymupdf
+python-dotenv
+python-multipart
