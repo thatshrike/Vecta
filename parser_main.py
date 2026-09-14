@@ -11,6 +11,17 @@ from dotenv import load_dotenv
 CACHE_DIR = "cache"
 os.makedirs(CACHE_DIR, exist_ok=True)
 
+def resolve_page_number(text: str, snippet: str) -> int:
+    if not text or not snippet:
+        return None
+    idx = text.find(snippet)
+    if idx == -1:
+        return None
+    matches = list(re.finditer(r'--- Page (\d+) ---', text[:idx]))
+    if matches:
+        return int(matches[-1].group(1))
+    return None
+
 # Load environment variables from .env (keeps secrets out of source control)
 load_dotenv()
 
@@ -76,7 +87,6 @@ Tender requirement: {requirement_summary}
 Bidder's statement: {bidder_text}
 
 Respond ONLY in this exact JSON shape, nothing else.
-If the text contains page markers like '--- Page 1 ---', use that to determine the page number of the snippet.
 
 If the bidder's statement doesn't give you enough concrete, specific evidence
 (exact quantities, specific govt/PSU entity named, specific year) to confirm
@@ -105,10 +115,6 @@ completed."
                         "confidence": {
                             "type": "NUMBER"
                         },
-                        "page_number": {
-                            "type": "INTEGER",
-                            "nullable": True
-                        },
                         "snippet": {
                             "type": "STRING",
                             "nullable": True
@@ -127,7 +133,10 @@ completed."
                         result = json.loads(response.read().decode('utf-8'))
                         text_response = result['candidates'][0]['content']['parts'][0]['text']
                         print(f"\n[LLM RAW RESPONSE]\n{text_response.strip()}\n[/LLM RAW RESPONSE]")
-                        return json.loads(text_response.strip())
+                        parsed = json.loads(text_response.strip())
+                        if parsed.get("snippet"):
+                            parsed["page_number"] = resolve_page_number(bidder_text, parsed["snippet"])
+                        return parsed
                 except urllib.error.HTTPError as e:
                     if e.code == 429 and attempt < 2:
                         time.sleep(2 ** attempt)
@@ -193,7 +202,6 @@ Bidder document text:
 {bidder_text}
 
 Respond ONLY in this exact JSON shape, nothing else.
-If the text contains page markers like '--- Page 1 ---', use that to determine the page number of the snippet.
 
 If the text contains vague language like 'relevant documents attached' without naming the specific document, set found=false and confidence below 0.5.
 Only set found=true if you can point to specific, unambiguous evidence.
@@ -218,7 +226,6 @@ IMPORTANT FOR TABLES: If the text contains a table (e.g. with a 'Status' column)
                     "present": { "type": "BOOLEAN", "nullable": True },
                     "confidence": { "type": "NUMBER" },
                     "reasoning": { "type": "STRING" },
-                    "page_number": { "type": "INTEGER", "nullable": True },
                     "snippet": { "type": "STRING", "nullable": True }
                 },
                 "required": ["found", "value", "present", "confidence", "reasoning"]
@@ -237,6 +244,8 @@ IMPORTANT FOR TABLES: If the text contains a table (e.g. with a 'Status' column)
                 text_response = result['candidates'][0]['content']['parts'][0]['text']
                 parsed = json.loads(text_response)
                 parsed["method"] = "llm_fallback"
+                if parsed.get("snippet"):
+                    parsed["page_number"] = resolve_page_number(bidder_text, parsed["snippet"])
                 with open(cache_file, 'w', encoding='utf-8') as f:
                     json.dump(parsed, f, indent=2)
                 return parsed
